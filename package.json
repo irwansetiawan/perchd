@@ -1,0 +1,36 @@
+{
+  "name": "perchd",
+  "version": "0.1.0",
+  "description": "Single active dev-server switcher for git worktrees",
+  "type": "module",
+  "bin": { "perchd": "./dist/cli.js" },
+  "files": ["dist"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "tsx src/cli.ts"
+  },
+  "keywords": ["git", "worktree", "dev-server", "cli", "nextjs", "vite"],
+  "license": "MIT",
+  "author": "Irwan Setiawan",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.7.0",
+    "cac": "^6.7.14",
+    "execa": "^9.5.0",
+    "picocolors": "^1.1.0",
+    "smol-toml": "^1.3.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "@types/node": "^22.0.0"
+  }
+}
