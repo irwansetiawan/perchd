@@ -1,0 +1,1 @@
+{ "name": "multiproc-server", "scripts": { "dev": "node server.js" }, "dependencies": { "next": "0.0.0-fixture" } }
