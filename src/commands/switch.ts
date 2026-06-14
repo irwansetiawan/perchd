@@ -12,12 +12,14 @@ import {
 import {
   startServer, stopGroup, waitForPort, waitForPortFree,
 } from "../core/process.js";
+import { killPort } from "../core/system.js";
 
 export interface SwitchOptions {
   target?: string;        // branch or path
   cmd?: string;
   port?: number;
   noWait?: boolean;
+  force?: boolean;        // kill a foreign process holding the target port
   nowIso: string;         // injected timestamp for testability
   cwd: string;
 }
@@ -67,9 +69,14 @@ export async function runSwitch(opts: SwitchOptions): Promise<ActiveServer | nul
   }
 
   // Wait for the new port to be free (handles shared default port).
-  const freed = await waitForPortFree(runner.port, config.stop_timeout * 1000);
+  let freed = await waitForPortFree(runner.port, config.stop_timeout * 1000);
+  if (!freed && opts.force) {
+    const killed = killPort(runner.port);
+    if (killed.length) console.warn(pc.yellow(`--force: killed pid(s) ${killed.join(", ")} holding port ${runner.port}`));
+    freed = await waitForPortFree(runner.port, config.stop_timeout * 1000);
+  }
   if (!freed) {
-    console.warn(pc.yellow(`warning: port ${runner.port} is still in use by another process; the server may fail to bind`));
+    console.warn(pc.yellow(`warning: port ${runner.port} is still in use${opts.force ? "" : " (use --force to kill the holder)"}; the server may fail to bind`));
   }
 
   // Start detached.
