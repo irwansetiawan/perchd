@@ -11,5 +11,7 @@ export async function runRestart(cwd: string, nowIso: string): Promise<void> {
     return;
   }
   // Switch to the active worktree by path; runSwitch stops it first, then restarts.
-  await runSwitch({ target: active.worktreePath, nowIso, cwd });
+  // Pass the stored command/port so a server launched with `switch --cmd` (which
+  // detection can't reproduce) still restarts correctly.
+  await runSwitch({ target: active.worktreePath, cmd: active.command, port: active.port, nowIso, cwd });
 }

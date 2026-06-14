@@ -45,7 +45,9 @@ export async function runDoctor(cwd: string): Promise<void> {
     const name = wt.branch ?? wt.path;
     if (!runner) { undetected.push(name); continue; }
     // A non-active worktree whose conventional port is already in use → foreign holder.
-    if (wt.path !== activePath && (await tcpListening(runner.port))) {
+    // Exclude the active server's own port: other worktrees sharing it (the common
+    // "several Next apps on 3000" case) are not foreign — that's perchd's own server.
+    if (wt.path !== activePath && runner.port !== state.active?.port && (await tcpListening(runner.port))) {
       foreignPorts.push({ branch: name, port: runner.port });
     }
   }
