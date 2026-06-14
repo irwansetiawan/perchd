@@ -11,11 +11,15 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev": "tsx src/cli.ts"
+    "dev": "tsx src/cli.ts",
+    "prepublishOnly": "npm run build"
   },
   "keywords": ["git", "worktree", "dev-server", "cli", "nextjs", "vite"],
   "license": "MIT",
   "author": "Irwan Setiawan",
+  "repository": { "type": "git", "url": "git+https://github.com/irwansetiawan/perchd.git" },
+  "bugs": { "url": "https://github.com/irwansetiawan/perchd/issues" },
+  "homepage": "https://github.com/irwansetiawan/perchd#readme",
   "pnpm": {
     "onlyBuiltDependencies": ["esbuild"]
   },
