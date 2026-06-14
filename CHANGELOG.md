@@ -27,3 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI commands**: `perchd` / `switch` (interactive picker via `fzf` or
   `@clack/prompts`), `status` / `ls`, `stop`. Global flags `--cmd`, `--port`,
   `--no-wait`.
+- **M3 — UX & resilience**: `restart`, `logs [-f]`, `open`, `path` (+ documented
+  zsh `cd` function), `gc` (reconcile deleted worktree + reap stale pids),
+  `doctor` (stale pids, dead ports, undetected worktrees, foreign port holders),
+  `config` (resolved config + detected runner per worktree), and a `--force`
+  flag on `switch` that kills a foreign process holding the target port.

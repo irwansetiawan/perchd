@@ -50,12 +50,17 @@ perchd stop            # stop the active server
 | `perchd` / `perchd switch [branch\|path]` | Switch the active dev server (interactive when no target). |
 | `perchd status` / `perchd ls` | Table: worktree, branch, runner, port, ACTIVE?, pid, uptime. |
 | `perchd stop` | Stop the active server. |
-
-More commands (`restart`, `logs -f`, `open`, `path`, `gc`, `doctor`) are on the
-roadmap — see [`the design spec`](./the design spec) §8/§11.
+| `perchd restart` | Restart the active server in place. |
+| `perchd logs [-f]` | Print (or follow with `-f`) the active server's log. |
+| `perchd open` | Open the active server's URL in the browser. |
+| `perchd path [branch]` | Print a worktree's absolute path (for the shell `cd` function). |
+| `perchd gc` | Stop+clear a deleted active worktree; reap stale pids. |
+| `perchd doctor` | Diagnose stale pids, dead ports, undetected worktrees, foreign port holders. |
+| `perchd config` | Print the resolved config and detected runner per worktree. |
 
 **Global flags** (for `switch`): `--cmd <str>` and `--port <n>` (one-off
-overrides), `--no-wait` (skip the readiness wait).
+overrides), `--no-wait` (skip the readiness wait), `--force` (kill a foreign
+process holding the target port).
 
 ## Supported frameworks
 
@@ -94,8 +99,7 @@ env     = { DEBUG = "1" }
 ## Jumping into the active worktree (`cd`)
 
 A child process can't change your shell's directory, so `perchd` ships a
-`path` subcommand and a small shell function. Add this to your `~/.zshrc`
-(**requires the `perchd path` command, landing in a later release**):
+`path` subcommand and a small shell function. Add this to your `~/.zshrc`:
 
 ```zsh
 perchd() {
