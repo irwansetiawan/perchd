@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0]
+
+### Added
+
+- `perchd watch` — a foreground watcher that auto-stops the active server the
+  instant its worktree directory is deleted (`git worktree remove` or a raw
+  `rm -rf`), instead of waiting for the next `status`/`switch`. Uses chokidar for
+  instant reaction plus a periodic safety poll so a missed filesystem event can
+  never leave a server running.
+
+## [0.1.x]
+
 ### Added
 
 - Project scaffolding (TypeScript, tsup, vitest), MIT license, CI.

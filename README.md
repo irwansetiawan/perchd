@@ -127,6 +127,7 @@ perchd stop                  # stop the active server
 | `perchd gc` | Stop + clear a deleted active worktree; reap stale pids. |
 | `perchd doctor` | Diagnose stale pids, dead ports, undetected worktrees, foreign port holders. |
 | `perchd config` | Print the resolved config and detected runner per worktree. |
+| `perchd watch` | Foreground watcher: auto-stops the active server the instant its worktree is deleted. |
 
 **Global flags** (for `switch`): `--cmd <str>` and `--port <n>` (one-off overrides),
 `--no-wait` (skip the readiness wait), `--force` (kill a foreign process holding the
