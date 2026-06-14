@@ -1,0 +1,16 @@
+worktree /repo/main
+HEAD abc1234abc1234abc1234abc1234abc1234abc12
+branch refs/heads/main
+
+worktree /repo/.worktrees/feature-auth
+HEAD def5678def5678def5678def5678def5678def56
+branch refs/heads/feature/auth
+
+worktree /repo/.worktrees/detached
+HEAD 9999aaa9999aaa9999aaa9999aaa9999aaa9999a
+detached
+
+worktree /repo/.worktrees/locked-wt
+HEAD 1111bbb1111bbb1111bbb1111bbb1111bbb1111b
+branch refs/heads/locked-thing
+locked
