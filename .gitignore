@@ -23,3 +23,6 @@ coverage/
 # Local-only design docs (kept out of the repo)
 perchd-prd.md
 docs/superpowers/
+
+# npm pack artifacts
+*.tgz
