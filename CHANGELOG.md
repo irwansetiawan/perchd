@@ -32,3 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `doctor` (stale pids, dead ports, undetected worktrees, foreign port holders),
   `config` (resolved config + detected runner per worktree), and a `--force`
   flag on `switch` that kills a foreign process holding the target port.
+
+## [0.1.2] — 2026-06-14
+
+### Changed
+
+- Rewrote the README around the parallel-agents workflow: ASCII header, badges,
+  before/after, sharpened "why single-active" rationale, and an FAQ. Docs only —
+  no behavior changes.
