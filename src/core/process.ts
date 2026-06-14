@@ -34,6 +34,11 @@ function tcpOpen(port: number, host = "127.0.0.1"): Promise<boolean> {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** True if something is listening on the TCP port (single probe). */
+export async function tcpListening(port: number): Promise<boolean> {
+  return tcpOpen(port);
+}
+
 export async function waitForPort(port: number, timeoutMs: number): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
