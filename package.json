@@ -1,11 +1,17 @@
 {
   "name": "perchd",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Single active dev-server switcher for git worktrees",
   "type": "module",
-  "bin": { "perchd": "./dist/cli.js" },
-  "files": ["dist"],
-  "engines": { "node": ">=20" },
+  "bin": {
+    "perchd": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
@@ -14,14 +20,28 @@
     "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build"
   },
-  "keywords": ["git", "worktree", "dev-server", "cli", "nextjs", "vite"],
+  "keywords": [
+    "git",
+    "worktree",
+    "dev-server",
+    "cli",
+    "nextjs",
+    "vite"
+  ],
   "license": "MIT",
   "author": "Irwan Setiawan",
-  "repository": { "type": "git", "url": "git+https://github.com/irwansetiawan/perchd.git" },
-  "bugs": { "url": "https://github.com/irwansetiawan/perchd/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/irwansetiawan/perchd.git"
+  },
+  "bugs": {
+    "url": "https://github.com/irwansetiawan/perchd/issues"
+  },
   "homepage": "https://github.com/irwansetiawan/perchd#readme",
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   },
   "dependencies": {
     "@clack/prompts": "^0.7.0",
