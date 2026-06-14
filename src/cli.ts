@@ -13,6 +13,7 @@ import { runPath } from "./commands/path.js";
 import { runGc } from "./commands/gc.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runConfig } from "./commands/config.js";
+import { runWatch } from "./commands/watch.js";
 
 const cli = cac("perchd");
 const cwd = process.cwd();
@@ -87,6 +88,9 @@ cli.command("doctor", "diagnose stale pids, dead ports, undetected worktrees")
 
 cli.command("config", "print resolved config + detected runner per worktree")
   .action(async () => { try { await runConfig(cwd); } catch (e) { fail(e); } });
+
+cli.command("watch", "watch for worktree deletion and auto-stop the active server")
+  .action(async () => { try { await runWatch(cwd); } catch (e) { fail(e); } });
 
 cli.help();
 cli.parse();
