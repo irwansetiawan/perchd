@@ -12,6 +12,13 @@ export interface Watcher {
 
 export interface StartWatchOptions {
   debounceMs?: number;
+  /**
+   * Safety-poll interval. chokidar gives instant reaction, but filesystem
+   * events can be missed or arrive before a freshly-added watch is established;
+   * a periodic `sync()` guarantees the deletion is still caught (within pollMs)
+   * so `watch` can never silently stop working.
+   */
+  pollMs?: number;
   /** Called at the end of every completed sync cycle (test hook). */
   onSync?: () => void;
 }
@@ -23,6 +30,7 @@ export interface StartWatchOptions {
  */
 export async function startWatch(cwd: string, opts: StartWatchOptions = {}): Promise<Watcher> {
   const debounceMs = opts.debounceMs ?? 300;
+  const pollMs = opts.pollMs ?? 1000;
   const ctx = await loadContext(cwd);
   const commonDir = ctx.commonDir;
   const stopTimeoutMs = ctx.config.stop_timeout * 1000;
@@ -31,6 +39,7 @@ export async function startWatch(cwd: string, opts: StartWatchOptions = {}): Pro
 
   let watchedParent: string | null = null;
   let timer: NodeJS.Timeout | null = null;
+  let poll: NodeJS.Timeout | null = null;
   let closed = false;
   let running = false;
   let pending = false;
@@ -80,10 +89,17 @@ export async function startWatch(cwd: string, opts: StartWatchOptions = {}): Pro
   // the case where the worktree was already deleted before `watch` started).
   await sync();
 
+  // Safety backstop: re-check on an interval so a missed/late chokidar event can
+  // never leave a deleted worktree's server running. Unref'd so it can't keep the
+  // process alive on its own.
+  poll = setInterval(() => { void sync(); }, pollMs);
+  poll.unref?.();
+
   return {
     async close() {
       closed = true;
       if (timer) clearTimeout(timer);
+      if (poll) clearInterval(poll);
       await watcher.close();
     },
   };
