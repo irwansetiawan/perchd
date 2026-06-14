@@ -1,4 +1,4 @@
-import { execa } from "execa";
+import { spawn } from "node:child_process";
 import { connect } from "node:net";
 
 export interface StartResult { pid: number; pgid: number; }
@@ -7,18 +7,19 @@ export function startServer(
   command: string,
   opts: { cwd: string; logFd: number; env?: Record<string, string> },
 ): StartResult {
-  const child = execa(command, {
+  // Native spawn (not execa): we want a detached child that inherits the log fd
+  // directly so it keeps writing after the CLI exits.
+  const child = spawn(command, {
     shell: true,
     cwd: opts.cwd,
     detached: true,
     stdio: ["ignore", opts.logFd, opts.logFd],
     env: { ...process.env, ...opts.env },
-    reject: false,
   });
   child.unref();
-  const pid = child.pid!;
+  if (child.pid === undefined) throw new Error(`failed to spawn: ${command}`);
   // detached:true makes the child its own process-group leader → pgid === pid
-  return { pid, pgid: pid };
+  return { pid: child.pid, pgid: child.pid };
 }
 
 function tcpOpen(port: number, host = "127.0.0.1"): Promise<boolean> {
