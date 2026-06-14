@@ -59,6 +59,6 @@ processes. That keeps them trivially testable.
 
 ## Scope
 
-Please read [`the design spec`](./the design spec) §3 (non-goals) and §9 (design
-rationale) before proposing features. In particular: no simultaneous servers,
-no reverse proxy, no per-worktree port hashing — single-active is the point.
+Before proposing features, keep the core constraints in mind: no simultaneous
+servers, no reverse proxy, no per-worktree port hashing — single-active is the
+point.

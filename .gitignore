@@ -19,3 +19,7 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Local-only design docs (kept out of the repo)
+perchd-prd.md
+docs/superpowers/

@@ -20,8 +20,7 @@ remembering commands, no port juggling.
 Agent concurrency (8 worktrees) is not preview concurrency (1 pair of eyes).
 Because only one server runs at a time, every project starts on its own
 conventional default port — collisions can't happen, no proxy, no port hashing,
-no `.env` rewriting. Bookmarks never move. See [`the design spec`](./the design spec)
-for the full design rationale.
+no `.env` rewriting. Bookmarks never move.
 
 ## Install
 
