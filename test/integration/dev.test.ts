@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { startDev, finishDev } from "../../src/commands/dev.js";
-import { readState } from "../../src/core/state.js";
+import { readState, writeState } from "../../src/core/state.js";
 import { gitCommonDir } from "../../src/core/git.js";
 import { stopGroup, waitForPort, waitForPortFree } from "../../src/core/process.js";
 
@@ -61,6 +61,15 @@ describe("perchd dev integration", () => {
     // calling again is a no-op (no throw, stays null)
     finishDev(session);
     expect(readState(common).active).toBeNull();
+
+    // pid-mismatch guard: a *different* (newer) session now owns the record.
+    const newer = { ...session.active, pid: session.active.pid + 99999, pgid: session.active.pgid + 99999 };
+    writeState(common, newer);
+    finishDev(session);                 // stale session must NOT clobber the newer record
+    expect(readState(common).active?.pid).toBe(newer.pid);
+    // cleanup the synthetic record so it doesn't leak into other state
+    writeState(common, null);
+
     expect(await waitForPortFree(3018, 5000)).toBe(true);
   });
 });
