@@ -31,6 +31,10 @@
   <sub>Single-active by design — sized to your eyes, not your agent count.</sub>
 </p>
 
+<p align="center">
+  <sub><code>perchd dev</code> is a drop-in for <code>npm run dev</code> — same command, same port, pointed at <em>any</em> worktree.</sub>
+</p>
+
 ---
 
 It's the agentic era. You don't write one branch at a time anymore.
@@ -46,6 +50,23 @@ remembering the command. No port roulette.
 ```sh
 perchd          # pick a worktree → old server dies, the new one comes up → URL printed
 ```
+
+## You already know the command
+
+You don't have to learn perchd to use perchd. Your dev command is `npm run dev` (or
+`pnpm dev`, or `make dev`). Trade it for **`perchd dev`** and you get the same thing —
+foreground, logs streaming, Ctrl-C to quit — except it runs **any worktree**, always
+on the **same port**:
+
+```sh
+perchd dev                 # the worktree you're standing in — your `npm run dev`, basically
+perchd dev feature/auth    # a different version, same terminal, same URL
+perchd dev main            # the main tree, without leaving your branch
+```
+
+Same muscle memory, every branch your agents touched — swap one word, switch the
+version you're looking at. And when you'd rather hop between previews from any
+terminal without a server holding your prompt, that's the switcher: plain `perchd`.
 
 ## Before / after
 
@@ -151,6 +172,11 @@ It streams logs live and stops on Ctrl-C, just like your normal dev command,
 but it honours perchd's single-active rule: starting one stops whatever was
 running, so the URL never changes regardless of which version is live.
 
+**`perchd dev` or plain `perchd`?** Same engine, two ergonomics. `dev` stays
+**attached** to your terminal — one version, live logs, like `npm run dev`. The
+switcher runs **detached** in the background, so you can flip between previews from
+any terminal and never tie up a prompt. One server, one port, either way.
+
 **Passthrough is runner-agnostic** — perchd appends your `-- <args>` verbatim to
 whatever command it resolved, and does not assume npm. For npm's own script
 forwarding, include npm's separator yourself: `perchd dev -- -- --host` runs
@@ -214,6 +240,11 @@ perchd() {
 Then `perchd cd feature/auth` drops you right where your agent has been working.
 
 ## FAQ
+
+**Do I have to learn a new tool?**
+No. `perchd dev` *is* your `npm run dev` — same foreground, same logs, same Ctrl-C —
+it just aims at any worktree (or the main tree) on the same port. Swap one word today;
+discover the switcher whenever you feel like it.
 
 **Can't it just run all eight servers at once?**
 No. You have two eyes. It runs the one you're looking at. That's not a limitation —
