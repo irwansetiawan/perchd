@@ -14,9 +14,12 @@ import { runGc } from "./commands/gc.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runConfig } from "./commands/config.js";
 import { runWatch } from "./commands/watch.js";
+import { startDev, finishDev } from "./commands/dev.js";
+import { stopGroup } from "./core/process.js";
 
 const cli = cac("perchd");
 const cwd = process.cwd();
+let devPassthrough: string[] = [];
 const nowIso = () => new Date().toISOString();
 
 // cac/mri may yield a string or array for repeated flags; normalize to a single number.
@@ -92,5 +95,42 @@ cli.command("config", "print resolved config + detected runner per worktree")
 cli.command("watch", "watch for worktree deletion and auto-stop the active server")
   .action(async () => { try { await runWatch(cwd); } catch (e) { fail(e); } });
 
+cli.command("dev [target]", "run a worktree's dev server in the foreground (drop-in for npm run dev)")
+  .option("--cmd <str>", "override launch command")
+  .option("--port <n>", "override port")
+  .option("--force", "kill any foreign process holding the target port")
+  .example("  perchd dev                 # run the worktree you're in")
+  .example("  perchd dev feature/auth    # run another worktree")
+  .example("  perchd dev main            # run the main tree")
+  .example("  perchd dev -- --host       # append args to the runner (npm: -- -- --host)")
+  .action(async (target: string | undefined, flags: any) => {
+    try {
+      const session = await startDev({
+        target, cmd: flags.cmd, port: toPort(flags.port), force: !!flags.force,
+        args: devPassthrough, nowIso: nowIso(), cwd,
+      });
+      // All three teardown paths funnel through the child's 'exit':
+      //  - local Ctrl-C: handler stops the group → child exits
+      //  - external stop/switch/watch: stops the group → child exits
+      //  - server self-exit: child exits directly
+      const onSignal = () => { void stopGroup(session.active.pgid, session.stopTimeoutMs); };
+      process.on("SIGINT", onSignal);
+      process.on("SIGTERM", onSignal);
+      session.child.once("error", fail);
+      const code: number = await new Promise((resolve) => {
+        session.child.once("exit", (c) => resolve(c ?? 0));
+      });
+      finishDev(session);
+      process.exit(code);
+    } catch (e) { fail(e); }
+  });
+
 cli.help();
-cli.parse();
+
+// Split argv at the first standalone `--`: everything after is verbatim
+// passthrough for `perchd dev`. Parse only the front so cac doesn't choke on it.
+const rawArgv = process.argv.slice(2);
+const sepIdx = rawArgv.indexOf("--");
+devPassthrough = sepIdx >= 0 ? rawArgv.slice(sepIdx + 1) : [];
+const frontArgv = sepIdx >= 0 ? rawArgv.slice(0, sepIdx) : rawArgv;
+cli.parse([process.argv[0], process.argv[1], ...frontArgv]);

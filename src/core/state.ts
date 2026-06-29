@@ -13,6 +13,7 @@ export interface ActiveServer {
   url: string;
   logPath: string;
   startedAt: string;
+  foreground?: boolean; // true when started via `perchd dev` (attached, no log file)
 }
 
 export interface State {
