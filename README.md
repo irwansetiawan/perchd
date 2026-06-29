@@ -133,6 +133,32 @@ perchd stop                  # stop the active server
 `--no-wait` (skip the readiness wait), `--force` (kill a foreign process holding the
 target port).
 
+## `perchd dev` — drop-in for `npm run dev`
+
+Run a worktree's dev server in the **foreground**, attached to your terminal,
+on its native port — a one-word swap for `npm run dev` / `pnpm dev` / `make dev`.
+
+```sh
+perchd dev                 # run the worktree you're in
+perchd dev feature/auth    # run another worktree
+perchd dev main            # run the main tree
+perchd dev --port 4000     # override the port
+perchd dev -- --host       # append args to the underlying runner
+```
+
+It streams logs live and stops on Ctrl-C, just like your normal dev command,
+but it honours perchd's single-active rule: starting one stops whatever was
+running, so the URL never changes regardless of which version is live.
+
+**Passthrough is runner-agnostic** — perchd appends your `-- <args>` verbatim to
+whatever command it resolved, and does not assume npm. For npm's own script
+forwarding, include npm's separator yourself: `perchd dev -- -- --host` runs
+`npm run dev -- --host`.
+
+> Note: the underlying dev server's own keypress shortcuts (e.g. vite's `r`/`q`)
+> are inactive under `perchd dev` — use `q`/Ctrl-C to stop and `perchd dev` to
+> restart. (Foreground servers don't read stdin, by design.)
+
 ## Supported frameworks
 
 Auto-detected with **zero config** — perchd reads the worktree and figures out how it

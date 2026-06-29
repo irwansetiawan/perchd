@@ -13,12 +13,14 @@ export function formatStatusRow(
   runner: { type: string; port: number } | null,
   active: boolean,
   proc: { pid: number; uptime: string } | null,
+  foreground = false,
 ): string {
   const marker = active ? pc.green("●") : " ";
   const name = wt.branch ?? `(${branchSlug(null, wt.head)})`;
   const type = runner ? runner.type : pc.dim("undetected");
   const port = runner ? String(runner.port) : "-";
-  const procInfo = active && proc ? `pid ${proc.pid} up ${proc.uptime}` : "";
+  const fg = active && foreground ? " (fg)" : "";
+  const procInfo = active && proc ? `pid ${proc.pid} up ${proc.uptime}${fg}` : "";
   return `${marker} ${name.padEnd(24)} ${type.padEnd(12)} ${port.padEnd(6)} ${procInfo}`;
 }
 
@@ -50,6 +52,12 @@ export async function runStatus(cwd: string, nowMs: number): Promise<void> {
     const proc = isActive && fresh.active
       ? { pid: fresh.active.pid, uptime: uptime(fresh.active.startedAt, nowMs) }
       : null;
-    console.log(formatStatusRow(wt, runner ? { type: runner.type, port: runner.port } : null, isActive, proc));
+    console.log(formatStatusRow(
+      wt,
+      runner ? { type: runner.type, port: runner.port } : null,
+      isActive,
+      proc,
+      isActive ? !!fresh.active?.foreground : false,
+    ));
   }
 }
