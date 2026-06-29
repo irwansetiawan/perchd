@@ -118,6 +118,7 @@ perchd stop                  # stop the active server
 | Command | What it does |
 | --- | --- |
 | `perchd` / `perchd switch [branch\|path]` | Switch the active dev server (interactive when no target). |
+| `perchd dev [branch\|path]` | Run a worktree's dev server in the foreground (drop-in for `npm run dev`). |
 | `perchd status` / `perchd ls` | Table: worktree, branch, runner, port, ACTIVE?, pid, uptime. |
 | `perchd stop` | Stop the active server. |
 | `perchd restart` | Restart the active server in place. |

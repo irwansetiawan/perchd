@@ -116,6 +116,7 @@ cli.command("dev [target]", "run a worktree's dev server in the foreground (drop
       const onSignal = () => { void stopGroup(session.active.pgid, session.stopTimeoutMs); };
       process.on("SIGINT", onSignal);
       process.on("SIGTERM", onSignal);
+      session.child.once("error", fail);
       const code: number = await new Promise((resolve) => {
         session.child.once("exit", (c) => resolve(c ?? 0));
       });

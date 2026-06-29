@@ -11,6 +11,10 @@ export async function runLogs(cwd: string, follow: boolean): Promise<void> {
     console.log(pc.dim("nothing active"));
     return;
   }
+  if (active.foreground) {
+    console.log(pc.dim("foreground server — logs stream to its terminal"));
+    return;
+  }
   if (!existsSync(active.logPath)) {
     console.log(pc.dim(`no log yet at ${active.logPath}`));
     return;
