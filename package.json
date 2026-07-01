@@ -1,6 +1,6 @@
 {
   "name": "perchd",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Single active dev-server switcher for git worktrees",
   "type": "module",
   "bin": {

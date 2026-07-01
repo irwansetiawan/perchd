@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0]
+
+### Added
+
+- `perchd dev [target]` — a foreground, runner-agnostic drop-in for `npm run dev`.
+  Runs any worktree (`perchd dev` = the one you're in, `perchd dev <branch>`, or
+  `perchd dev main` for the primary checkout) attached to your terminal with live
+  logs and Ctrl-C to stop, while honouring the single-active model: starting one
+  stops whatever was running and hands off the port. Supports `--port`/`--cmd`
+  overrides and verbatim, runner-agnostic `-- <args>` passthrough (npm needs its
+  own extra `--`). Active foreground servers are labelled `(fg)` in `perchd status`.
+
+### Changed
+
+- README now leads with the `perchd dev` drop-in positioning (hero line, a "You
+  already know the command" section, a `dev`-vs-switch clarifier, and an FAQ entry).
+
 ## [0.2.0]
 
 ### Added
