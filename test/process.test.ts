@@ -45,7 +45,15 @@ describe("whole-group teardown", () => {
       });
       expect(pid).toBeGreaterThan(0);
       expect(pgid).toBe(pid); // detached ⇒ group leader
-      expect(await waitForPort(GROUP_PORT, 8000)).toBe(true);
+
+      // This fixture starts TWO node processes (server + a fanned-out child)
+      // before it binds, so it needs more headroom than a one-liner server on a
+      // loaded CI runner. On failure, surface the server's own log — a bare
+      // "expected false to be true" tells you nothing.
+      if (!(await waitForPort(GROUP_PORT, 20_000))) {
+        const log = readFileSync(join(dir, "out.log"), "utf8");
+        throw new Error(`server never bound port ${GROUP_PORT}. Its log:\n${log || "(empty)"}`);
+      }
       expect(existsSync(pidfile)).toBe(true);
       const childPid = Number(readFileSync(pidfile, "utf8"));
 
