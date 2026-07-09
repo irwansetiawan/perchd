@@ -5,6 +5,9 @@ on:
 jobs:
   test:
     strategy:
+      # Without this, the first failing job cancels the rest — so a flake on one
+      # platform hides whether the others passed.
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         node: [20, 22]
