@@ -2,8 +2,11 @@ import { cac } from "cac";
 import pc from "picocolors";
 import { loadContext } from "./core/context.js";
 import { readState } from "./core/state.js";
+import { containingWorktree } from "./core/target.js";
+import { attachViewport } from "./core/viewport.js";
 import { pick } from "./ui/picker.js";
 import { runSwitch } from "./commands/switch.js";
+import { runAttach } from "./commands/attach.js";
 import { runStatus } from "./commands/status.js";
 import { runStop } from "./commands/stop.js";
 import { runRestart } from "./commands/restart.js";
@@ -17,7 +20,7 @@ import { runWatch } from "./commands/watch.js";
 
 const cli = cac("perchd");
 const cwd = process.cwd();
-let devPassthrough: string[] = [];
+let passthrough: string[] = [];
 const nowIso = () => new Date().toISOString();
 
 // cac/mri may yield a string or array for repeated flags; normalize to a single number.
@@ -33,34 +36,73 @@ function fail(e: unknown): never {
   process.exit(1);
 }
 
-cli
-  .command("[target]", "switch active dev server (interactive if no target)")
-  .option("--cmd <str>", "override launch command")
-  .option("--port <n>", "override port")
-  .option("--no-wait", "skip readiness wait")
-  .option("--force", "kill any foreign process holding the target port")
+/**
+ * Bare `perchd`: the worktree you're standing in is the obvious target.
+ * Only when cwd is outside every worktree do we ask.
+ */
+async function bareTarget(): Promise<string | null> {
+  const ctx = await loadContext(cwd);
+  const here = containingWorktree(ctx.worktrees, cwd);
+  if (here) return here.path;
+  const active = readState(ctx.commonDir).active;
+  return pick(ctx.worktrees, active?.worktreePath ?? null);
+}
+
+/**
+ * Switch, then attach unless `-d`. This is the ONLY place attachment is
+ * decided — runSwitch stays free of viewport concerns.
+ */
+async function switchThenMaybeAttach(target: string | undefined, flags: any): Promise<void> {
+  const chosen = target ?? (await bareTarget());
+  if (!chosen) return; // picker cancelled
+  const active = await runSwitch({
+    target: chosen,
+    cmd: flags.cmd,
+    port: toPort(flags.port),
+    noWait: flags.wait === false,
+    force: !!flags.force,
+    args: passthrough,
+    quiet: !flags.detach, // the viewport banner is about to say the same thing
+    nowIso: nowIso(),
+    cwd,
+  });
+  if (!active || flags.detach) return;
+  const ctx = await loadContext(cwd);
+  process.exit(await attachViewport(active, ctx.commonDir, { fromStart: true }));
+}
+
+type Cmd = ReturnType<typeof cli.command>;
+const switchOptions = (cmd: Cmd): Cmd =>
+  cmd
+    .option("-d, --detach", "start in the background; don't attach")
+    .option("--cmd <str>", "override launch command")
+    .option("--port <n>", "override port")
+    .option("--no-wait", "skip readiness wait")
+    .option("--force", "kill any foreign process holding the target port");
+
+switchOptions(cli.command("[target]", "run a worktree's dev server, attached (drop-in for npm run dev)"))
+  .example("  perchd                     # this worktree, attached — ^C detaches")
+  .example("  perchd feature/auth        # move the perch, attached")
+  .example("  perchd feature/auth -d     # move the perch, stay in the background")
+  .example("  perchd -- --host           # append args to the runner (npm: -- -- --host)")
   .action(async (target: string | undefined, flags: any) => {
-    try {
-      let chosen = target;
-      if (!chosen) {
-        const ctx = await loadContext(cwd);
-        const active = readState(ctx.commonDir).active;
-        const sel = await pick(ctx.worktrees, active?.worktreePath ?? null);
-        if (!sel) return;
-        chosen = sel;
-      }
-      await runSwitch({ target: chosen, cmd: flags.cmd, port: toPort(flags.port), noWait: flags.wait === false, force: !!flags.force, nowIso: nowIso(), cwd });
-    } catch (e) { fail(e); }
+    try { await switchThenMaybeAttach(target, flags); } catch (e) { fail(e); }
   });
 
-cli.command("switch [target]", "switch active dev server")
-  .option("--cmd <str>", "override launch command")
-  .option("--port <n>", "override port")
-  .option("--no-wait", "skip readiness wait")
-  .option("--force", "kill any foreign process holding the target port")
+switchOptions(cli.command("switch [target]", "switch the active dev server (alias for `perchd [target]`)"))
   .action(async (target: string | undefined, flags: any) => {
-    try { await runSwitch({ target, cmd: flags.cmd, port: toPort(flags.port), noWait: flags.wait === false, force: !!flags.force, nowIso: nowIso(), cwd }); }
-    catch (e) { fail(e); }
+    try { await switchThenMaybeAttach(target, flags); } catch (e) { fail(e); }
+  });
+
+switchOptions(cli.command("dev [target]", "deprecated: use `perchd [target]`"))
+  .action(async (target: string | undefined, flags: any) => {
+    console.warn(pc.yellow("`perchd dev` is deprecated — use `perchd` (identical behavior). It will be removed in a future major."));
+    try { await switchThenMaybeAttach(target, flags); } catch (e) { fail(e); }
+  });
+
+cli.command("attach [target]", "attach to the active server (^C detaches, server keeps running)")
+  .action(async (target: string | undefined) => {
+    try { process.exit(await runAttach(cwd, target)); } catch (e) { fail(e); }
   });
 
 cli.command("status", "list worktrees and the active server").alias("ls")
@@ -96,9 +138,9 @@ cli.command("watch", "watch for worktree deletion and auto-stop the active serve
 cli.help();
 
 // Split argv at the first standalone `--`: everything after is verbatim
-// passthrough for `perchd dev`. Parse only the front so cac doesn't choke on it.
+// passthrough for the runner. Parse only the front so cac doesn't choke on it.
 const rawArgv = process.argv.slice(2);
 const sepIdx = rawArgv.indexOf("--");
-devPassthrough = sepIdx >= 0 ? rawArgv.slice(sepIdx + 1) : [];
+passthrough = sepIdx >= 0 ? rawArgv.slice(sepIdx + 1) : [];
 const frontArgv = sepIdx >= 0 ? rawArgv.slice(0, sepIdx) : rawArgv;
 cli.parse([process.argv[0], process.argv[1], ...frontArgv]);

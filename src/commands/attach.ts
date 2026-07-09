@@ -14,7 +14,7 @@ export async function runAttach(cwd: string, target?: string): Promise<number> {
   const ctx = await loadContext(cwd);
 
   if (target) {
-    const active = await runSwitch({ target, nowIso: new Date().toISOString(), cwd });
+    const active = await runSwitch({ target, quiet: true, nowIso: new Date().toISOString(), cwd });
     if (!active) return 1;
     // Freshly started: replay the log from the top so the startup banner shows.
     return attachViewport(active, ctx.commonDir, { fromStart: true });

@@ -23,6 +23,7 @@ export interface SwitchOptions {
   noWait?: boolean;
   force?: boolean;        // kill a foreign process holding the target port
   args?: string[];        // verbatim passthrough appended after `--`
+  quiet?: boolean;        // suppress the success line (the viewport banner replaces it)
   nowIso: string;         // injected timestamp for testability
   cwd: string;
 }
@@ -109,9 +110,11 @@ export async function runSwitch(opts: SwitchOptions): Promise<ActiveServer | nul
 
   if (!opts.noWait) {
     const ready = await waitForPort(runner.port, config.ready_timeout * 1000);
-    if (ready) console.log(pc.green(`✓ ${active.branch} → ${active.url}`));
-    else console.warn(pc.yellow(`started but not ready in ${config.ready_timeout}s — see ${logPath}`));
-  } else {
+    // A not-ready warning always surfaces; the success line is redundant when a
+    // viewport banner is about to print the same thing.
+    if (!ready) console.warn(pc.yellow(`started but not ready in ${config.ready_timeout}s — see ${logPath}`));
+    else if (!opts.quiet) console.log(pc.green(`✓ ${active.branch} → ${active.url}`));
+  } else if (!opts.quiet) {
     console.log(pc.green(`✓ ${active.branch} starting → ${active.url}`));
   }
   return active;

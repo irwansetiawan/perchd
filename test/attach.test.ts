@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const readState = vi.fn();
-const attachViewport = vi.fn(async () => 0);
-const runSwitch = vi.fn();
-const existsSync = vi.fn(() => true);
+const readState = vi.fn<(...a: any[]) => any>();
+const attachViewport = vi.fn<(...a: any[]) => Promise<number>>(async () => 0);
+const runSwitch = vi.fn<(...a: any[]) => Promise<any>>();
+const existsSync = vi.fn<(...a: any[]) => boolean>(() => true);
 
 vi.mock("node:fs", () => ({ existsSync: (...a: any[]) => existsSync(...a) }));
 vi.mock("../src/core/context.js", () => ({
