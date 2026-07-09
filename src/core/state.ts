@@ -13,7 +13,6 @@ export interface ActiveServer {
   url: string;
   logPath: string;
   startedAt: string;
-  foreground?: boolean; // true when started via `perchd dev` (attached, no log file)
 }
 
 export interface State {
@@ -36,7 +35,11 @@ export function readState(commonDir: string): State {
   if (!existsSync(p)) return { version: 1, active: null };
   try {
     const parsed = JSON.parse(readFileSync(p, "utf8"));
-    return { version: 1, active: parsed.active ?? null };
+    const active = parsed.active ?? null;
+    // 0.3.x wrote `foreground: true` for `perchd dev`. Servers are always
+    // background now; "attached" belongs to the viewport, not the server.
+    if (active && "foreground" in active) delete active.foreground;
+    return { version: 1, active };
   } catch {
     return { version: 1, active: null };
   }
