@@ -23,25 +23,14 @@ describe("formatStatusRow", () => {
     expect(row).toContain("undetected");
   });
 
-  it("labels an active foreground server with (fg)", () => {
+  it("never labels a server (fg) — every server is background now", () => {
     const row = formatStatusRow(
       { path: "/wt", branch: "feature/auth", head: "abc1234", detached: false, locked: false, bare: false },
       { type: "nextjs", port: 3000 },
       true,
       { pid: 123, uptime: "2m" },
-      true, // foreground
-    );
-    expect(row).toContain("(fg)");
-  });
-
-  it("omits (fg) for a background server", () => {
-    const row = formatStatusRow(
-      { path: "/wt", branch: "feature/auth", head: "abc1234", detached: false, locked: false, bare: false },
-      { type: "nextjs", port: 3000 },
-      true,
-      { pid: 123, uptime: "2m" },
-      false,
     );
     expect(row).not.toContain("(fg)");
+    expect(row).toContain("pid 123");
   });
 });

@@ -11,8 +11,8 @@ export async function runLogs(cwd: string, follow: boolean): Promise<void> {
     console.log(pc.dim("nothing active"));
     return;
   }
-  if (active.foreground) {
-    console.log(pc.dim("foreground server — logs stream to its terminal"));
+  if (!active.logPath) {
+    console.log(pc.dim("this server was started by an older perchd and has no log file — `perchd restart` to fix"));
     return;
   }
   if (!existsSync(active.logPath)) {
