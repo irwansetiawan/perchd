@@ -7,8 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-> Docs for this section have landed ahead of the implementation. The behavior below
-> is the agreed target for 0.4.0 and is **not yet shipped**.
+## [0.4.0]
 
 ### Changed
 
@@ -25,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ActiveServer.foreground` is retired: every server has a real `logPath`, and "attached"
   became a property of the viewport rather than the server. `gc`/reconcile tolerate a
   `0.3.x` state file that still carries `foreground: true` / `logPath: ""`.
+- Spawned dev servers now get `FORCE_COLOR=1` / `CLICOLOR_FORCE=1` (unless `NO_COLOR` or
+  an explicit `FORCE_COLOR` is set). Servers write to a log file so they can outlive the
+  terminal, and dev servers strip colour when stdout is not a TTY — forcing it keeps ANSI
+  codes in the log, which `tail` replays on attach. Interactive progress re-rendering
+  (spinners) is still not faithfully reproduced; that would need a pty.
+- `perchd status` no longer shows a `(fg)` label — no server is foreground any more.
 - README repositioned around bare `perchd` as the drop-in, with the "Detach and switch.
   Attach and watch." model, a `Ctrl-C detaches` callout, and a migration table.
 

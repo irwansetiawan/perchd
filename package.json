@@ -1,6 +1,6 @@
 {
   "name": "perchd",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "npm run dev, pointed at any git worktree — one dev server, one port, switch which branch it points at",
   "type": "module",
   "bin": {

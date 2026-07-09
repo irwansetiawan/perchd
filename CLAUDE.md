@@ -59,10 +59,10 @@ Flow for a switch: `cli.ts` → `core/context.ts` (git worktrees + common dir) �
 - **`spawn`, not `execa`, in `core/process.ts`.** execa v9's strict stdio typing rejects
   a runtime numeric fd; native `child_process.spawn` inherits the log fd cleanly for the
   detached child. (execa is still used elsewhere.)
-- **Foreground servers must keep `stdio[0] = "ignore"`.** Giving the child stdin causes
-  vite/Next to be suspended with SIGTTIN/SIGTTOU when backgrounded. The cost is that the
-  dev server's own keypress UI (vite `r`/`q`) is inactive — this is a known, accepted
-  trade-off, not a bug to fix by handing over stdin.
+- **Servers must keep `stdio[0] = "ignore"`.** Giving the child stdin causes vite/Next to
+  be suspended with SIGTTIN/SIGTTOU when backgrounded. The cost is that the dev server's
+  own keypress UI (vite `r`/`q`) is inactive — a known, accepted trade-off, not a bug to
+  fix by handing over stdin.
 - **Passthrough (`core/passthrough.ts`) is runner-agnostic.** `perchd … -- <args>` is
   appended verbatim (shell-quoted) to whatever command was resolved. npm needs its *own*
   extra `--`, so the user writes `-- -- --host`. Don't special-case npm.
@@ -87,31 +87,35 @@ Flow for a switch: `cli.ts` → `core/context.ts` (git worktrees + common dir) �
   in `test/fixtures/` (`mini-server`, and `multiproc-server` which mimics vite→esbuild
   for process-group teardown).
 
-## In-flight redesign (branch `worktree-drop-in-first-redesign`, target 0.4.0)
+## The viewport model (0.4.0)
 
-**Not yet implemented.** The docs on this branch describe the target behavior; the code
-still ships the 0.3.0 surface. Do not merge or publish the docs ahead of the code.
+**One server, detachable viewport** — tmux-for-dev-servers. Every server runs detached
+in the background and writes to a log file. "Foreground" is not a kind of server; it is
+a **viewport**: `tail -f` on that log plus a poller watching the state file
+(`core/viewport.ts`).
 
-The model becomes **one server, detachable viewport** (tmux-for-dev-servers): the server
-always lives in the background, and "foreground" is just whether a terminal is currently
-attached to its log stream.
-
-- Bare `perchd` becomes the `npm run dev` drop-in (switch here + attach foreground).
-- `-d` / `--detach` flips **any** switch to background — one uniform, explicit axis.
+- Bare `perchd` is the `npm run dev` drop-in: switch to cwd's worktree, then attach.
+  Outside any worktree it shows the picker (`containingWorktree` decides).
+- `-d` / `--detach` flips **any** switch to background. One uniform, explicit axis.
 - **Ctrl-C detaches; it does not kill.** `perchd stop` is the only way to terminate.
-- `perchd dev` is demoted to a deprecated alias for bare `perchd`.
-- `ActiveServer.foreground` goes away: every server has a real `logPath`, and
-  "attached" becomes a property of the viewport, not the server. `gc`/reconcile must
-  tolerate a 0.3.0 state file that still has `foreground: true` / `logPath: ""`.
+  Ending a viewport must never signal the server — that invariant *is* the product.
+- `cli.ts` is the **only** place attachment is decided. `runSwitch` never attaches;
+  keeping it that way avoids a `switch ↔ attach` import cycle.
+- `perchd dev` is a deprecated alias for bare `perchd`.
 
-**Open decision, must be settled before implementing:** a server that survives detach
-must write to a **file**, and dev servers strip colour when `stdout` isn't a TTY
-(verified: picocolors reports `isColorSupported=false` to a file, `true` with
-`FORCE_COLOR=1`). Today's `perchd dev` inherits the real TTY, so colour works *now* —
-a naïve move to "background + tail the logfile" would make the drop-in look plainer
-than the `npm run dev` it replaces. Likely fix: inject `FORCE_COLOR=1` into the child
-env (respecting `NO_COLOR`); full fidelity would need a pty and is deferred. See §6 of
-the spec.
+A viewport ends for exactly four reasons — `detached`, `perch-moved` (another terminal
+switched), `stopped`, `server-exited` (clears the record if the pid is still ours).
+
+**Why `FORCE_COLOR`:** a server that survives detach must write to a **file**, and dev
+servers strip colour when `stdout` isn't a TTY (verified: picocolors reports
+`isColorSupported=false` to a file, `true` with `FORCE_COLOR=1`). So `core/env.ts`
+injects `FORCE_COLOR=1`/`CLICOLOR_FORCE=1` into spawned servers unless `NO_COLOR` or an
+explicit `FORCE_COLOR` is set — otherwise the drop-in would look plainer than the
+`npm run dev` it replaces. Interactive progress re-rendering (spinners) is still not
+faithful; that needs a pty and was rejected (native dependency).
+
+`readState` strips a legacy `foreground` key from 0.3.x state files; those records have
+`logPath: ""` and cannot be attached to (`perchd restart` fixes them).
 
 Full design: `docs/superpowers/specs/2026-07-02-perchd-drop-in-first-redesign-design.md`
 (gitignored, local-only).
