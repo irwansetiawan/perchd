@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { connect } from "node:net";
+import { colorEnv } from "./env.js";
 
 export interface StartResult { pid: number; pgid: number; }
 
@@ -14,7 +15,7 @@ export function startServer(
     cwd: opts.cwd,
     detached: true,
     stdio: ["ignore", opts.logFd, opts.logFd],
-    env: { ...process.env, ...opts.env },
+    env: { ...process.env, ...colorEnv(), ...opts.env },
   });
   child.unref();
   if (child.pid === undefined) throw new Error(`failed to spawn: ${command}`);
