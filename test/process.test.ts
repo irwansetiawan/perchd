@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, openSync, closeSync, readFileSync, existsSync } fr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { startServer, startForeground, stopGroup, waitForPort, waitForPortFree } from "../src/core/process.js";
+import { startServer, stopGroup, waitForPort, waitForPortFree } from "../src/core/process.js";
 
 const PORT = 39517;
 const serverCmd = `node -e "require('http').createServer((_,r)=>r.end('ok')).listen(${PORT})"`;
@@ -29,42 +29,34 @@ describe("process control", () => {
   });
 });
 
-const FG_PORT = 39518;
+const GROUP_PORT = 39518;
 
-describe("startForeground", () => {
-  it("starts a foreground server, becomes ready, and stopGroup tears down the whole group", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "perchd-fg-"));
+describe("whole-group teardown", () => {
+  it("tears down a server's fanned-out children, not just the group leader", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "perchd-group-"));
     const pidfile = join(dir, "child.pid");
     const fixture = fileURLToPath(new URL("./fixtures/multiproc-server/server.js", import.meta.url));
+    const logFd = openSync(join(dir, "out.log"), "a");
     try {
-      const { child, pgid } = startForeground(`node ${fixture}`, {
+      const { pid, pgid } = startServer(`node ${fixture}`, {
         cwd: dir,
-        env: { PORT: String(FG_PORT), CHILD_PIDFILE: pidfile },
+        logFd,
+        env: { PORT: String(GROUP_PORT), CHILD_PIDFILE: pidfile },
       });
-      expect(child.pid).toBeGreaterThan(0);
-      expect(pgid).toBe(child.pid); // detached ⇒ group leader
-      expect(await waitForPort(FG_PORT, 8000)).toBe(true);
+      expect(pid).toBeGreaterThan(0);
+      expect(pgid).toBe(pid); // detached ⇒ group leader
+      expect(await waitForPort(GROUP_PORT, 8000)).toBe(true);
       expect(existsSync(pidfile)).toBe(true);
       const childPid = Number(readFileSync(pidfile, "utf8"));
 
       await stopGroup(pgid, 5000);
-      expect(await waitForPortFree(FG_PORT, 5000)).toBe(true);
+      expect(await waitForPortFree(GROUP_PORT, 5000)).toBe(true);
       // the fanned-out child is also dead (whole-group teardown)
       let childAlive = true;
       try { process.kill(childPid, 0); } catch { childAlive = false; }
       expect(childAlive).toBe(false);
     } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("spawns a pid for a valid command", () => {
-    // empty command still spawns a shell; assert the happy-path shape instead:
-    const dir = mkdtempSync(join(tmpdir(), "perchd-fg2-"));
-    try {
-      const { child } = startForeground(`node -e "setTimeout(()=>{},200)"`, { cwd: dir });
-      expect(child.pid).toBeGreaterThan(0);
-    } finally {
+      closeSync(logFd);
       rmSync(dir, { recursive: true, force: true });
     }
   });

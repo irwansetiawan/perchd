@@ -54,4 +54,21 @@ describe("M1 switch integration", () => {
     expect(readState(common).active).toBeNull();
     expect(await waitForPortFree(3007, 5000)).toBe(true);
   });
+
+  it("appends verbatim passthrough args to the resolved command", async () => {
+    const { stdout } = await execa(
+      "git", ["rev-parse", "--path-format=absolute", "--show-toplevel"], { cwd: root },
+    );
+    const wtPath = stdout.trim();
+
+    const active = await runSwitch({
+      target: wtPath, cmd: "PORT=3031 node server.js", port: 3031, noWait: true,
+      args: ["--host"], nowIso: "2026-07-09T00:00:00Z", cwd: wtPath,
+    });
+    // appendPassthrough shell-quotes each arg verbatim (safe under shell:true).
+    expect(active?.command).toBe("PORT=3031 node server.js '--host'");
+
+    await runStop(wtPath);
+    expect(await waitForPortFree(3031, 5000)).toBe(true);
+  });
 });

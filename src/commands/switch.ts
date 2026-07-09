@@ -5,6 +5,8 @@ import { loadContext } from "../core/context.js";
 import { detectRunner } from "../detect/index.js";
 import { resolveRunner } from "../core/resolve.js";
 import { reconcile } from "../core/reconcile.js";
+import { resolveDevTarget } from "../core/target.js";
+import { appendPassthrough } from "../core/passthrough.js";
 import { branchSlug } from "../core/git.js";
 import {
   readState, writeState, clearActive, logPathFor, type ActiveServer,
@@ -20,13 +22,15 @@ export interface SwitchOptions {
   port?: number;
   noWait?: boolean;
   force?: boolean;        // kill a foreign process holding the target port
+  args?: string[];        // verbatim passthrough appended after `--`
+  quiet?: boolean;        // suppress the success line (the viewport banner replaces it)
   nowIso: string;         // injected timestamp for testability
   cwd: string;
 }
 
 export async function runSwitch(opts: SwitchOptions): Promise<ActiveServer | null> {
   const ctx = await loadContext(opts.cwd);
-  const { commonDir, config, worktrees } = ctx;
+  const { commonDir, repoRoot, config, worktrees } = ctx;
   const state = readState(commonDir);
 
   // Lazy reconcile against current worktrees.
@@ -40,11 +44,8 @@ export async function runSwitch(opts: SwitchOptions): Promise<ActiveServer | nul
   });
   const fresh = readState(commonDir);
 
-  // Pick target worktree.
-  const target = worktrees.find(
-    (w) => w.path === opts.target || w.branch === opts.target || branchSlug(w.branch, w.head) === opts.target,
-  );
-  if (!target) throw new Error(`No worktree matches "${opts.target}"`);
+  // Pick target worktree (handles `main` → primary checkout, and cwd's worktree).
+  const target = resolveDevTarget({ worktrees, repoRoot, cwd: opts.cwd, target: opts.target });
   if (target.locked) console.warn(pc.yellow(`warning: ${target.branch} is locked`));
 
   // Resolve runner.
@@ -80,13 +81,14 @@ export async function runSwitch(opts: SwitchOptions): Promise<ActiveServer | nul
   }
 
   // Start detached.
+  const command = appendPassthrough(runner.command, opts.args ?? []);
   const slug = branchSlug(target.branch, target.head);
   const logPath = logPathFor(commonDir, slug);
   mkdirSync(dirname(logPath), { recursive: true });
   const logFd = openSync(logPath, "a");
   let started;
   try {
-    started = startServer(runner.command, { cwd: runner.cwd, logFd, env: runner.env });
+    started = startServer(command, { cwd: runner.cwd, logFd, env: runner.env });
   } finally {
     closeSync(logFd);
   }
@@ -95,7 +97,7 @@ export async function runSwitch(opts: SwitchOptions): Promise<ActiveServer | nul
     branch: target.branch,
     worktreePath: target.path,
     type: runner.type,
-    command: runner.command,
+    command,
     cwd: runner.cwd,
     pid: started.pid,
     pgid: started.pgid,
@@ -108,9 +110,11 @@ export async function runSwitch(opts: SwitchOptions): Promise<ActiveServer | nul
 
   if (!opts.noWait) {
     const ready = await waitForPort(runner.port, config.ready_timeout * 1000);
-    if (ready) console.log(pc.green(`✓ ${active.branch} → ${active.url}`));
-    else console.warn(pc.yellow(`started but not ready in ${config.ready_timeout}s — see ${logPath}`));
-  } else {
+    // A not-ready warning always surfaces; the success line is redundant when a
+    // viewport banner is about to print the same thing.
+    if (!ready) console.warn(pc.yellow(`started but not ready in ${config.ready_timeout}s — see ${logPath}`));
+    else if (!opts.quiet) console.log(pc.green(`✓ ${active.branch} → ${active.url}`));
+  } else if (!opts.quiet) {
     console.log(pc.green(`✓ ${active.branch} starting → ${active.url}`));
   }
   return active;

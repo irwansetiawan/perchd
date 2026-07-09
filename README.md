@@ -27,12 +27,12 @@
 </p>
 
 <p align="center">
-  <strong>1 live server &middot; 0 port collisions &middot; 0 daemons</strong><br>
-  <sub>Single-active by design — sized to your eyes, not your agent count.</sub>
+  <strong>perchd is <code>npm run dev</code>, pointed at any worktree —<br>
+  and you can change which one without killing anything.</strong>
 </p>
 
 <p align="center">
-  <sub><code>perchd dev</code> is a drop-in for <code>npm run dev</code> — same command, same port, pointed at <em>any</em> worktree.</sub>
+  <sub>1 live server &middot; 0 port collisions &middot; 0 daemons</sub>
 </p>
 
 ---
@@ -43,30 +43,54 @@ You open six git worktrees, point a coding agent at each — Claude Code here, C
 there, Codex on the spike — and they all start typing at once. Six dev servers want
 port 3000. You want to **look at one of them**.
 
-perchd is the perch. You pick a worktree; it stops whatever was running, figures out
-how to start the one you picked, and lands it on its **native port**. No `cd`. No
-remembering the command. No port roulette.
-
-```sh
-perchd          # pick a worktree → old server dies, the new one comes up → URL printed
-```
+perchd is the perch. One dev server, on its **native port**, following whichever
+branch you're looking at. No `cd`. No remembering the command. No port roulette.
 
 ## You already know the command
 
 You don't have to learn perchd to use perchd. Your dev command is `npm run dev` (or
-`pnpm dev`, or `make dev`). Trade it for **`perchd dev`** and you get the same thing —
-foreground, logs streaming, Ctrl-C to quit — except it runs **any worktree**, always
-on the **same port**:
+`pnpm dev`, or `make dev`). Trade it for **`perchd`** and you get the same thing —
+foreground, logs streaming — except it runs **any worktree**, always on the **same
+port**:
 
 ```sh
-perchd dev                 # the worktree you're standing in — your `npm run dev`, basically
-perchd dev feature/auth    # a different version, same terminal, same URL
-perchd dev main            # the main tree, without leaving your branch
+perchd                 # the worktree you're standing in — your `npm run dev`, basically
+perchd feature/auth    # a different version, same terminal, same URL
+perchd main            # the main tree, without leaving your branch
 ```
 
-Same muscle memory, every branch your agents touched — swap one word, switch the
-version you're looking at. And when you'd rather hop between previews from any
-terminal without a server holding your prompt, that's the switcher: plain `perchd`.
+Same muscle memory. Swap one word, and now every branch your agents touched is one
+command away.
+
+<sub>(Each of those attaches to your terminal, so you'd <code>^C</code> to detach before
+running the next — which, as the next section explains, doesn't stop anything.)</sub>
+
+## Detach and switch. Attach and watch.
+
+Here's the part that isn't `npm run dev`.
+
+The server **always lives in the background**. What you call "foreground" is just a
+*viewport* — your terminal, attached to the log stream. So:
+
+```sh
+perchd                 # attach: live logs in your terminal, like npm run dev
+^C                     # detach: you stop watching. the server KEEPS RUNNING.
+perchd fix/payments    # move the perch to another branch
+perchd stop            # actually terminate it
+```
+
+> **Ctrl-C detaches. It does not kill.**
+> That one rule is what makes switching safe — and it's the opposite reflex from
+> `npm run dev`. To really stop the server, say `perchd stop`.
+
+And when you'd rather not tie up a prompt at all, `-d` switches without attaching:
+
+```sh
+perchd feature/auth -d   # switch, print the URL, hand your prompt back
+perchd attach            # ...come watch it whenever you like
+```
+
+One server. One port. `-d` is the only knob, and it means the same thing everywhere.
 
 ## Before / after
 
@@ -82,8 +106,8 @@ $ cd ../repo-fix-payments                 # ...was it `npm run dev` or `make dev
 With perchd:
 
 ```sh
-$ perchd
-# pick feature/auth → old server stops, frees its port, auth starts on :3000
+$ perchd feature/auth
+# old server stops, frees its port, auth starts on :3000, logs stream
 # → http://localhost:3000
 ```
 
@@ -104,7 +128,7 @@ looking at — and that one assumption pays for everything:
 - **No proxy, no port hashing, no `.env` rewriting.** Your bookmarks never move. It's
   always `localhost:<the default for that framework>`.
 - **No daemon.** perchd reconciles lazily the next time you run it. Delete the active
-  worktree and the server gets stopped and cleared on your next `status` or `switch` —
+  worktree and the server gets stopped and cleared on your next `status` or switch —
   self-healing, no watcher.
 - **No orphans.** Dev servers spawn children (Turbopack, webpack, esbuild). perchd
   starts each server as its own process group and tears down the **whole group**, so
@@ -115,6 +139,9 @@ If a worktree needs several processes at once, point its runner at `mprocs` /
 fan out all it likes.
 
 ## Install
+
+Install it **globally** — perchd is a CLI you run from any worktree, in any terminal,
+so it belongs on your `PATH`, not in one project's `node_modules`:
 
 ```sh
 npm i -g perchd       # or: pnpm add -g perchd   ·   bun add -g perchd
@@ -128,8 +155,9 @@ otherwise a clean built-in prompt takes over.
 
 ```sh
 cd any/worktree/of/your/repo
-perchd                       # interactive picker → switch
-perchd switch feature/auth   # non-interactive, by branch
+perchd                       # run this worktree, attached (your `npm run dev`)
+^C                           # detach — it keeps running
+perchd feature/auth -d       # switch to another branch, don't attach
 perchd status                # table: worktree, runner, port, which is ACTIVE
 perchd stop                  # stop the active server
 ```
@@ -138,10 +166,12 @@ perchd stop                  # stop the active server
 
 | Command | What it does |
 | --- | --- |
-| `perchd` / `perchd switch [branch\|path]` | Switch the active dev server (interactive when no target). |
-| `perchd dev [branch\|path]` | Run a worktree's dev server in the foreground (drop-in for `npm run dev`). |
-| `perchd status` / `perchd ls` | Table: worktree, branch, runner, port, ACTIVE?, pid, uptime. |
+| `perchd [branch\|path]` | Switch the active dev server **and attach** (drop-in for `npm run dev`). Interactive picker when there's no obvious target. |
+| `perchd … -d` / `--detach` | Switch but stay in the background — print the URL and return the prompt. |
+| `perchd switch [branch\|path]` | Explicit synonym for `perchd [branch\|path]`. Note it now **attaches** by default; add `-d` for the old background behavior. |
+| `perchd attach [branch]` | Attach to the active server (or switch to `branch`, then attach). |
 | `perchd stop` | Stop the active server. |
+| `perchd status` / `perchd ls` | Table: worktree, branch, runner, port, ACTIVE?, pid, uptime. |
 | `perchd restart` | Restart the active server in place. |
 | `perchd logs [-f]` | Print (or follow with `-f`) the active server's log. |
 | `perchd open` | Open the active server's URL in the browser. |
@@ -150,41 +180,50 @@ perchd stop                  # stop the active server
 | `perchd doctor` | Diagnose stale pids, dead ports, undetected worktrees, foreign port holders. |
 | `perchd config` | Print the resolved config and detected runner per worktree. |
 | `perchd watch` | Foreground watcher: auto-stops the active server the instant its worktree is deleted. |
+| `perchd dev [target]` | **Deprecated** — an alias for `perchd [target]`. See [migrating](#migrating-from-perchd-dev). |
 
-**Global flags** (for `switch`): `--cmd <str>` and `--port <n>` (one-off overrides),
-`--no-wait` (skip the readiness wait), `--force` (kill a foreign process holding the
-target port).
-
-## `perchd dev` — drop-in for `npm run dev`
-
-Run a worktree's dev server in the **foreground**, attached to your terminal,
-on its native port — a one-word swap for `npm run dev` / `pnpm dev` / `make dev`.
-
-```sh
-perchd dev                 # run the worktree you're in
-perchd dev feature/auth    # run another worktree
-perchd dev main            # run the main tree
-perchd dev --port 4000     # override the port
-perchd dev -- --host       # append args to the underlying runner
-```
-
-It streams logs live and stops on Ctrl-C, just like your normal dev command,
-but it honours perchd's single-active rule: starting one stops whatever was
-running, so the URL never changes regardless of which version is live.
-
-**`perchd dev` or plain `perchd`?** Same engine, two ergonomics. `dev` stays
-**attached** to your terminal — one version, live logs, like `npm run dev`. The
-switcher runs **detached** in the background, so you can flip between previews from
-any terminal and never tie up a prompt. One server, one port, either way.
+**Flags on a switch:** `-d`/`--detach` (don't attach), `--cmd <str>` and `--port <n>`
+(one-off overrides), `--no-wait` (skip the readiness wait), `--force` (kill a foreign
+process holding the target port).
 
 **Passthrough is runner-agnostic** — perchd appends your `-- <args>` verbatim to
 whatever command it resolved, and does not assume npm. For npm's own script
-forwarding, include npm's separator yourself: `perchd dev -- -- --host` runs
+forwarding, include npm's separator yourself: `perchd -- -- --host` runs
 `npm run dev -- --host`.
 
-> Note: the underlying dev server's own keypress shortcuts (e.g. vite's `r`/`q`)
-> are inactive under `perchd dev` — use `q`/Ctrl-C to stop and `perchd dev` to
-> restart. (Foreground servers don't read stdin, by design.)
+```sh
+perchd --port 4000     # override the port
+perchd -- --host       # append args to the underlying runner
+```
+
+> **Two honest caveats about attached output.** Because the server writes to a log
+> stream that outlives your terminal rather than to the terminal itself:
+>
+> - The dev server's own keypress shortcuts (e.g. vite's `r`/`q`) are inactive — use
+>   `perchd restart` and `perchd stop`. perchd's servers don't read stdin by design;
+>   it's what keeps them from being suspended once they outlive your terminal.
+> - Colour comes through, but **interactive progress re-rendering** (spinners, bars
+>   that redraw in place) isn't faithfully reproduced. Logs, URLs, and errors are all
+>   exactly what you'd see from `npm run dev`.
+
+## Migrating from `perchd dev`
+
+Through `0.3.x`, the foreground drop-in was a subcommand: `perchd dev`. It's now just
+`perchd`. `perchd dev` still works and behaves identically — it prints a deprecation
+hint and will be removed in a future major.
+
+| Before (`≤ 0.3.x`) | Now |
+| --- | --- |
+| `perchd dev` | `perchd` |
+| `perchd dev feature/auth` | `perchd feature/auth` |
+| `perchd` (background switch) | `perchd -d` |
+| `perchd switch feature/auth` (background) | `perchd feature/auth -d` |
+| Ctrl-C **stopped** the server | Ctrl-C **detaches**; use `perchd stop` |
+
+`perchd switch` still exists as an explicit synonym, but like every switch it now
+**attaches** by default — pass `-d` to get the old background behavior.
+
+The last row is the one to internalize: Ctrl-C no longer kills the dev server.
 
 ## Supported frameworks
 
@@ -242,9 +281,14 @@ Then `perchd cd feature/auth` drops you right where your agent has been working.
 ## FAQ
 
 **Do I have to learn a new tool?**
-No. `perchd dev` *is* your `npm run dev` — same foreground, same logs, same Ctrl-C —
-it just aims at any worktree (or the main tree) on the same port. Swap one word today;
-discover the switcher whenever you feel like it.
+No. `perchd` *is* your `npm run dev` — same foreground, same logs — it just aims at any
+worktree (or the main tree) on the same port. Swap one word today; discover the
+switching whenever you feel like it.
+
+**Why doesn't Ctrl-C stop the server?**
+Because the server isn't *yours* — it's the perch, and your terminal is just looking at
+it. Detaching lets you close the terminal, switch branches, or attach from somewhere
+else without a restart. `perchd stop` is the kill switch.
 
 **Can't it just run all eight servers at once?**
 No. You have two eyes. It runs the one you're looking at. That's not a limitation —
@@ -262,7 +306,7 @@ No. It manages dev servers. The agents are your problem — perchd just gives yo
 window onto whatever they've built.
 
 **I deleted the active worktree out from under it.**
-Your next `status` or `switch` notices, stops the server, and clears the state.
+Your next `status` or switch notices, stops the server, and clears the state.
 Self-healing.
 
 ## License

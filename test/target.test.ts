@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveDevTarget } from "../src/core/target.js";
+import { resolveDevTarget, containingWorktree } from "../src/core/target.js";
 import type { Worktree } from "../src/core/git.js";
 
 const wt = (path: string, branch: string | null, head = "abc1234"): Worktree =>
@@ -50,5 +50,18 @@ describe("resolveDevTarget", () => {
     const withNested = [main, nested];
     expect(resolveDevTarget({ worktrees: withNested, repoRoot: "/repo", cwd: "/repo/packages/web/app" }))
       .toBe(nested);
+  });
+});
+
+describe("containingWorktree", () => {
+  const nested = wt("/repo/wt/auth", "feature/auth");
+  const nestedList = [main, nested];
+
+  it("returns the deepest worktree containing cwd", () => {
+    expect(containingWorktree(nestedList, "/repo/wt/auth/src")).toBe(nested);
+  });
+
+  it("returns null when cwd is outside every worktree", () => {
+    expect(containingWorktree(nestedList, "/elsewhere")).toBeNull();
   });
 });

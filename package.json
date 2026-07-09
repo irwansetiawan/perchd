@@ -1,7 +1,7 @@
 {
   "name": "perchd",
-  "version": "0.3.0",
-  "description": "Single active dev-server switcher for git worktrees",
+  "version": "0.4.0",
+  "description": "npm run dev, pointed at any git worktree — one dev server, one port, switch which branch it points at",
   "type": "module",
   "bin": {
     "perchd": "dist/cli.js"
@@ -23,10 +23,13 @@
   "keywords": [
     "git",
     "worktree",
+    "worktrees",
     "dev-server",
+    "dev",
     "cli",
     "nextjs",
-    "vite"
+    "vite",
+    "ai-agents"
   ],
   "license": "MIT",
   "author": "Irwan Setiawan",
