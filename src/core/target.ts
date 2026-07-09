@@ -8,7 +8,7 @@ export interface ResolveDevTargetInput {
   target?: string;
 }
 
-function containingWorktree(worktrees: Worktree[], cwd: string): Worktree | null {
+export function containingWorktree(worktrees: Worktree[], cwd: string): Worktree | null {
   // longest path that is a prefix of cwd (handles nested worktrees)
   let best: Worktree | null = null;
   for (const w of worktrees) {
