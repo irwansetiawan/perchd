@@ -21,6 +21,7 @@ const deps = (over: Partial<ViewportDeps>): ViewportDeps => ({
   isAlive: () => true,
   startTail: fakeTail,
   pollMs: 5,
+  graceMs: 0,
   onSigint: () => () => {},
   ...over,
 });
@@ -53,5 +54,43 @@ describe("runViewport", () => {
     const tail = fakeTail();
     await runViewport(active, deps({ startTail: () => tail, readActive: () => null }));
     expect(tail.kill).toHaveBeenCalledWith("SIGTERM");
+  });
+
+  // Regression: a real switch tears the old server down and clears the record
+  // BEFORE writing the new one. Without a grace window the viewport concludes
+  // "server-exited"/"stopped" during that gap and never sees the new perch.
+  it("rides out the switch gap (dead pid, then no record) and reports perch-moved", async () => {
+    const moved = { ...active, pid: 9999, branch: "fix/payments" };
+    const sequence: (ActiveServer | null)[] = [
+      active,   // 0: still ours, alive
+      active,   // 1: ours, but now dead  (stopGroup ran)
+      null,     // 2: record cleared      (clearActive ran)
+      null,     // 3: still starting...
+      moved,    // 4: new record lands    (writeState ran)
+    ];
+    let poll = -1;
+    let clock = 0;
+
+    const exit = await runViewport(active, deps({
+      readActive: () => { poll++; return sequence[Math.min(poll, sequence.length - 1)]; },
+      isAlive: () => poll === 0,   // our pid is dead from the 2nd poll onward
+      now: () => (clock += 100),   // 100ms per poll: never reaches graceMs
+      graceMs: 2500,
+      pollMs: 1,
+    }));
+
+    expect(exit).toEqual({ reason: "perch-moved", to: "fix/payments" });
+    expect(poll).toBeGreaterThanOrEqual(4); // it really did ride out the gap
+  });
+
+  it("still reports stopped once the grace window expires with no new perch", async () => {
+    let clock = 0;
+    const exit = await runViewport(active, deps({
+      readActive: () => null,
+      now: () => (clock += 1000), // blows past graceMs
+      graceMs: 2500,
+      pollMs: 1,
+    }));
+    expect(exit).toEqual({ reason: "stopped" });
   });
 });

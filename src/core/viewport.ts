@@ -14,6 +14,14 @@ export interface ViewportDeps {
   startTail: (logPath: string, fromStart: boolean) => ChildProcess;
   fromStart?: boolean;
   pollMs?: number;
+  /**
+   * How long to keep watching after our server disappears before concluding it
+   * is really gone. A switch tears the old server down *before* writing the new
+   * record, so the state file transiently points at a dead pid and then at
+   * nothing at all. Without this window every switch would look like a crash.
+   */
+  graceMs?: number;
+  now?: () => number;
   /** Register a SIGINT handler; returns an unregister function. */
   onSigint?: (handler: () => void) => () => void;
 }
@@ -30,6 +38,8 @@ export function defaultTail(logPath: string, fromStart: boolean): ChildProcess {
  */
 export async function runViewport(active: ActiveServer, deps: ViewportDeps): Promise<ViewportExit> {
   const pollMs = deps.pollMs ?? 400;
+  const graceMs = deps.graceMs ?? 2500;
+  const now = deps.now ?? Date.now;
   const tail = deps.startTail(active.logPath, deps.fromStart ?? true);
 
   let settled = false;
@@ -46,11 +56,26 @@ export async function runViewport(active: ActiveServer, deps: ViewportDeps): Pro
   // If the tail dies (log rotated, file removed), treat it as a detach.
   tail.once("exit", () => settle({ reason: "detached" }));
 
+  // Timestamp of the first poll at which our server looked gone, or null.
+  let goneSince: number | null = null;
+
   const timer = setInterval(() => {
     const cur = deps.readActive();
-    if (!cur) return settle({ reason: "stopped" });
-    if (cur.pid !== active.pid) return settle({ reason: "perch-moved", to: cur.branch });
-    if (!deps.isAlive(active.pid)) return settle({ reason: "server-exited" });
+
+    // Someone else's pid owns the record: the perch moved. Unambiguous — settle now.
+    if (cur && cur.pid !== active.pid) return settle({ reason: "perch-moved", to: cur.branch });
+
+    const gone = !cur || !deps.isAlive(active.pid);
+    if (!gone) { goneSince = null; return; }
+
+    // Our server is gone. That is ambiguous: a switch kills the old server and
+    // clears the record *before* starting the new one, so `stopped`/`server-exited`
+    // and `perch-moved` look identical for a few hundred ms. Wait the window out —
+    // a new pid appearing during it wins (handled above).
+    if (goneSince === null) { goneSince = now(); return; }
+    if (now() - goneSince < graceMs) return;
+
+    settle(cur ? { reason: "server-exited" } : { reason: "stopped" });
   }, pollMs);
 
   const exit = await done;

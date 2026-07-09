@@ -106,6 +106,17 @@ a **viewport**: `tail -f` on that log plus a poller watching the state file
 A viewport ends for exactly four reasons — `detached`, `perch-moved` (another terminal
 switched), `stopped`, `server-exited` (clears the record if the pid is still ours).
 
+**The `graceMs` window is load-bearing, don't remove it.** `runSwitch` stops the old
+server and clears the state record *before* starting the new one, so for a few hundred
+ms the state file points at a dead pid and then at nothing. A poller that concluded on
+first sight would report `server-exited` (exit 1!) on every ordinary switch — which is
+exactly what happened before the window existed. So when our server looks gone, the
+viewport keeps polling for `graceMs` (default 2.5s); a record with a *different* pid
+appearing during that window wins and yields `perch-moved`. Tests that fake the
+transition atomically (new record, no null gap, old pid still alive) pass while the real
+flow is broken — `test/integration/attach-flow.test.ts` drives a real `runSwitch` for
+this reason.
+
 **Why `FORCE_COLOR`:** a server that survives detach must write to a **file**, and dev
 servers strip colour when `stdout` isn't a TTY (verified: picocolors reports
 `isColorSupported=false` to a file, `true` with `FORCE_COLOR=1`). So `core/env.ts`

@@ -36,7 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **`perchd attach [branch]`** — attach to the active server's log stream (or switch to
-  `branch`, then attach). Ctrl-C leaves the server running.
+  `branch`, then attach). Ctrl-C leaves the server running. When another terminal moves
+  the perch, an attached viewport exits cleanly with `▸ perch moved to <branch>`: the
+  poller rides out the window in which a switch has torn down the old server but not yet
+  written the new record, so a switch is never mistaken for a crash.
 - `CLAUDE.md` — architecture, invariants, and non-obvious constraints for coding agents.
 
 ### Deprecated

@@ -66,17 +66,25 @@ describe("attach flow", () => {
     expect(await waitForPortFree(3021, 5000)).toBe(true);
   });
 
-  it("a cross-terminal switch ends an attached viewport with perch-moved", async () => {
+  // Regression: a REAL switch stops the old server and clears the record before
+  // writing the new one. An earlier version of this test faked the transition
+  // atomically, so it passed while the real flow printed "server exited".
+  it("a real cross-terminal switch ends an attached viewport with perch-moved", async () => {
     const active = await runSwitch({
       target: wtPath, cmd: "PORT=3022 node server.js", port: 3022,
       nowIso: "2026-07-09T00:00:00Z", cwd: wtPath,
     });
+    expect(active).not.toBeNull();
     expect(await waitForPort(3022, 8000)).toBe(true);
     const common = await gitCommonDir(wtPath);
 
-    // Another terminal moves the perch: the state record now names a different pid.
+    // Another terminal genuinely moves the perch, gap and all.
+    let moved: unknown = null;
     setTimeout(() => {
-      writeState(common, { ...active!, pid: active!.pid + 99999, branch: "fix/payments" });
+      void runSwitch({
+        target: wtPath, cmd: "PORT=3024 node server.js", port: 3024,
+        nowIso: "2026-07-09T00:00:01Z", cwd: wtPath,
+      }).then((a) => { moved = a; });
     }, 100);
 
     const exit = await runViewport(active!, {
@@ -86,11 +94,16 @@ describe("attach flow", () => {
       pollMs: 50,
       onSigint: () => () => {},
     });
-    expect(exit).toEqual({ reason: "perch-moved", to: "fix/payments" });
+    expect(exit.reason).toBe("perch-moved");
 
-    await stopGroup(active!.pgid, 5000);
+    // let the switch settle, then clean up whatever is now active
+    await waitForPort(3024, 8000);
+    const cur = readState(common).active;
+    if (cur) await stopGroup(cur.pgid, 5000);
     writeState(common, null);
+    expect(await waitForPortFree(3024, 5000)).toBe(true);
     expect(await waitForPortFree(3022, 5000)).toBe(true);
+    expect(moved).not.toBeNull();
   });
 
   it("reports server-exited when the server dies on its own", async () => {
