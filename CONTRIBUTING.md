@@ -57,8 +57,23 @@ processes. That keeps them trivially testable.
   `chore:`).
 - Keep files focused and small; one clear responsibility each.
 
+## The core model
+
+perchd keeps **one** dev server alive, always running in the background. A terminal
+"in the foreground" is just a **detachable viewport** onto that server's log stream —
+so `Ctrl-C` detaches the viewport and leaves the server running; only `perchd stop`
+terminates it. The foreground/background choice is one explicit flag (`-d`) over one
+lifecycle, never two separate commands.
+
+Keep that shape when adding features. If a change makes "am I attached?" and "is the
+server alive?" the same question again, it's the wrong change.
+
 ## Scope
 
 Before proposing features, keep the core constraints in mind: no simultaneous
 servers, no reverse proxy, no per-worktree port hashing — single-active is the
 point.
+
+`CLAUDE.md` documents the architecture and the non-obvious constraints (process-group
+teardown, why foreground servers must not read stdin, why `spawn` and not `execa`).
+Worth reading before your first change.

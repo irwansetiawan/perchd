@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> Docs for this section have landed ahead of the implementation. The behavior below
+> is the agreed target for 0.4.0 and is **not yet shipped**.
+
+### Changed
+
+- **`perchd` is now the drop-in for `npm run dev`.** Bare `perchd` (and
+  `perchd <branch>`) switches the active server and **attaches** to it in the
+  foreground with live logs. The foreground/background split is no longer two
+  commands — it's one explicit flag.
+- **BREAKING: Ctrl-C detaches, it no longer stops the server.** perchd's model is one
+  server that always lives in the background, with your terminal as a detachable
+  viewport onto its log stream. Use `perchd stop` to terminate the server.
+- **`-d` / `--detach`** switches without attaching (print the URL, return the prompt) —
+  the old background-switch behavior of bare `perchd`. The flag means the same thing on
+  every switch, whether or not a target was passed.
+- `ActiveServer.foreground` is retired: every server has a real `logPath`, and "attached"
+  became a property of the viewport rather than the server. `gc`/reconcile tolerate a
+  `0.3.x` state file that still carries `foreground: true` / `logPath: ""`.
+- README repositioned around bare `perchd` as the drop-in, with the "Detach and switch.
+  Attach and watch." model, a `Ctrl-C detaches` callout, and a migration table.
+
+### Added
+
+- **`perchd attach [branch]`** — attach to the active server's log stream (or switch to
+  `branch`, then attach). Ctrl-C leaves the server running.
+- `CLAUDE.md` — architecture, invariants, and non-obvious constraints for coding agents.
+
+### Deprecated
+
+- **`perchd dev [target]`** — now an alias for `perchd [target]`. It behaves identically
+  and prints a deprecation hint. It will be removed in a future major.
+
 ## [0.3.0]
 
 ### Added
