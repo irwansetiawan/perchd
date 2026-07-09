@@ -62,6 +62,9 @@ perchd main            # the main tree, without leaving your branch
 Same muscle memory. Swap one word, and now every branch your agents touched is one
 command away.
 
+<sub>(Each of those attaches to your terminal, so you'd <code>^C</code> to detach before
+running the next — which, as the next section explains, doesn't stop anything.)</sub>
+
 ## Detach and switch. Attach and watch.
 
 Here's the part that isn't `npm run dev`.
@@ -193,10 +196,15 @@ perchd --port 4000     # override the port
 perchd -- --host       # append args to the underlying runner
 ```
 
-> Note: the underlying dev server's own keypress shortcuts (e.g. vite's `r`/`q`) are
-> inactive while attached — use `perchd restart` and `perchd stop`. (perchd's servers
-> don't read stdin, by design: it's what keeps them from being suspended when they
-> outlive your terminal.)
+> **Two honest caveats about attached output.** Because the server writes to a log
+> stream that outlives your terminal rather than to the terminal itself:
+>
+> - The dev server's own keypress shortcuts (e.g. vite's `r`/`q`) are inactive — use
+>   `perchd restart` and `perchd stop`. perchd's servers don't read stdin by design;
+>   it's what keeps them from being suspended once they outlive your terminal.
+> - Colour comes through, but **interactive progress re-rendering** (spinners, bars
+>   that redraw in place) isn't faithfully reproduced. Logs, URLs, and errors are all
+>   exactly what you'd see from `npm run dev`.
 
 ## Migrating from `perchd dev`
 

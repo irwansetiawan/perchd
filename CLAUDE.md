@@ -104,5 +104,14 @@ attached to its log stream.
   "attached" becomes a property of the viewport, not the server. `gc`/reconcile must
   tolerate a 0.3.0 state file that still has `foreground: true` / `logPath: ""`.
 
+**Open decision, must be settled before implementing:** a server that survives detach
+must write to a **file**, and dev servers strip colour when `stdout` isn't a TTY
+(verified: picocolors reports `isColorSupported=false` to a file, `true` with
+`FORCE_COLOR=1`). Today's `perchd dev` inherits the real TTY, so colour works *now* —
+a naïve move to "background + tail the logfile" would make the drop-in look plainer
+than the `npm run dev` it replaces. Likely fix: inject `FORCE_COLOR=1` into the child
+env (respecting `NO_COLOR`); full fidelity would need a pty and is deferred. See §6 of
+the spec.
+
 Full design: `docs/superpowers/specs/2026-07-02-perchd-drop-in-first-redesign-design.md`
 (gitignored, local-only).
