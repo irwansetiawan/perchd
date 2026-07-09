@@ -115,7 +115,14 @@ viewport keeps polling for `graceMs` (default 2.5s); a record with a *different*
 appearing during that window wins and yields `perch-moved`. Tests that fake the
 transition atomically (new record, no null gap, old pid still alive) pass while the real
 flow is broken — `test/integration/attach-flow.test.ts` drives a real `runSwitch` for
-this reason.
+this reason, and must `await` that switch rather than racing it via `.then`.
+
+Known limitation: `graceMs` is a flat 2.5s, while the switch gap is bounded by
+`stop_timeout` (a server that ignores SIGTERM is SIGKILLed only after 8s by default).
+Such a server's switch would still be misreported as `server-exited`. Real servers exit
+on SIGTERM in well under a second, and CI confirms the gap stays under 2.5s. The precise
+fix is a handoff marker in the state file rather than a longer timeout — a longer one
+would delay the `stopped` message after an ordinary `perchd stop`.
 
 **Why `FORCE_COLOR`:** a server that survives detach must write to a **file**, and dev
 servers strip colour when `stdout` isn't a TTY (verified: picocolors reports

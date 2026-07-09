@@ -78,14 +78,17 @@ describe("attach flow", () => {
     expect(await waitForPort(3022, 8000)).toBe(true);
     const common = await gitCommonDir(wtPath);
 
-    // Another terminal genuinely moves the perch, gap and all.
-    let moved: unknown = null;
-    setTimeout(() => {
-      void runSwitch({
+    // Another terminal genuinely moves the perch, gap and all. Hold the promise:
+    // the viewport returns as soon as the new record lands, while runSwitch is
+    // still in its readiness wait. Racing it (assigning via .then) is flaky.
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const switching = (async () => {
+      await sleep(100);
+      return runSwitch({
         target: wtPath, cmd: "PORT=3024 node server.js", port: 3024,
         nowIso: "2026-07-09T00:00:01Z", cwd: wtPath,
-      }).then((a) => { moved = a; });
-    }, 100);
+      });
+    })();
 
     const exit = await runViewport(active!, {
       readActive: () => readState(common).active,
@@ -96,14 +99,15 @@ describe("attach flow", () => {
     });
     expect(exit.reason).toBe("perch-moved");
 
-    // let the switch settle, then clean up whatever is now active
-    await waitForPort(3024, 8000);
-    const cur = readState(common).active;
-    if (cur) await stopGroup(cur.pgid, 5000);
+    // Let the switch finish before touching its server, so cleanup can't race it.
+    const moved = await switching;
+    expect(moved).not.toBeNull();
+    expect(moved!.port).toBe(3024);
+
+    await stopGroup(moved!.pgid, 5000);
     writeState(common, null);
     expect(await waitForPortFree(3024, 5000)).toBe(true);
     expect(await waitForPortFree(3022, 5000)).toBe(true);
-    expect(moved).not.toBeNull();
   });
 
   it("reports server-exited when the server dies on its own", async () => {
