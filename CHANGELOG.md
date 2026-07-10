@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0]
+
+### Changed
+
+- **BREAKING: Ctrl-C now stops the server you started, like `npm run dev`.** This
+  reverses 0.4.0's "Ctrl-C always detaches." The behaviour is *hybrid*, keyed on whether
+  your terminal started the server:
+  - Bare `perchd` / `perchd <branch>` / `perchd switch` **start** the server, so Ctrl-C
+    stops it — and so does closing the terminal window (SIGHUP). No orphans.
+  - `perchd attach` **attaches** to a server that's meant to persist, so Ctrl-C there only
+    detaches and leaves it running.
+  The attach banner states which mode you're in (`^C stops` vs `^C detaches`).
+  `perchd stop` still terminates the active server from anywhere.
+- Internally, `runViewport` now reports `{ interrupted, signal }` and never signals the
+  server itself; the stop-vs-detach policy lives in `attachViewport` (graceful `stopGroup`
+  on SIGINT, best-effort group `SIGTERM` on SIGHUP since the terminal is already gone).
+
+### Added
+
+- **`perchd -v` / `perchd --version`** — previously threw `Unknown option`. Prints the
+  installed version (read from `package.json`, so it's correct under both the published
+  binary and `pnpm dev`).
+
 ## [0.4.0]
 
 ### Changed

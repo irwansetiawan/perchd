@@ -87,7 +87,7 @@ Flow for a switch: `cli.ts` → `core/context.ts` (git worktrees + common dir) �
   in `test/fixtures/` (`mini-server`, and `multiproc-server` which mimics vite→esbuild
   for process-group teardown).
 
-## The viewport model (0.4.0)
+## The viewport model (0.4.0), with hybrid Ctrl-C (0.5.0)
 
 **One server, detachable viewport** — tmux-for-dev-servers. Every server runs detached
 in the background and writes to a log file. "Foreground" is not a kind of server; it is
@@ -97,14 +97,26 @@ a **viewport**: `tail -f` on that log plus a poller watching the state file
 - Bare `perchd` is the `npm run dev` drop-in: switch to cwd's worktree, then attach.
   Outside any worktree it shows the picker (`containingWorktree` decides).
 - `-d` / `--detach` flips **any** switch to background. One uniform, explicit axis.
-- **Ctrl-C detaches; it does not kill.** `perchd stop` is the only way to terminate.
-  Ending a viewport must never signal the server — that invariant *is* the product.
+- **Hybrid Ctrl-C (`attachViewport`'s `stopOnInterrupt`):** a viewport that *started*
+  the server (bare `perchd` / `switch`) **stops** it on Ctrl-C, and on window-close
+  (SIGHUP) too — that is the `npm run dev` drop-in promise. A viewport that *attached*
+  to an already-running server (`perchd attach`) only **detaches** on Ctrl-C; killing
+  something you attached to peek at would be a footgun. **The banner must state which,
+  per mode** ("^C stops" vs "^C detaches") — that is what keeps the overload legible
+  rather than surprising. `perchd stop` always terminates regardless.
+- **`runViewport` never signals the server itself.** It reports `{interrupted, signal}`;
+  the stop-vs-detach *policy* lives in `attachViewport` (graceful `stopGroup` on SIGINT;
+  best-effort synchronous `SIGTERM` to the group on SIGHUP, since the terminal is gone
+  and there is no time to wait on an escalating teardown). Keeping the signal-to-reason
+  mapping pure is what makes it unit-testable.
 - `cli.ts` is the **only** place attachment is decided. `runSwitch` never attaches;
   keeping it that way avoids a `switch ↔ attach` import cycle.
 - `perchd dev` is a deprecated alias for bare `perchd`.
 
-A viewport ends for exactly four reasons — `detached`, `perch-moved` (another terminal
-switched), `stopped`, `server-exited` (clears the record if the pid is still ours).
+A viewport ends for exactly five reasons — `interrupted` (Ctrl-C/SIGHUP; the signal is
+carried so the policy can pick stop vs. detach), `detached` (the tail process died on
+its own), `perch-moved` (another terminal switched), `stopped`, `server-exited` (clears
+the record if the pid is still ours).
 
 **The `graceMs` window is load-bearing, don't remove it.** `runSwitch` stops the old
 server and clears the state record *before* starting the new one, so for a few hundred

@@ -28,7 +28,7 @@
 
 <p align="center">
   <strong>perchd is <code>npm run dev</code>, pointed at any worktree —<br>
-  and you can change which one without killing anything.</strong>
+  switch which branch is live without the port-collision dance.</strong>
 </p>
 
 <p align="center">
@@ -59,38 +59,32 @@ perchd feature/auth    # a different version, same terminal, same URL
 perchd main            # the main tree, without leaving your branch
 ```
 
-Same muscle memory. Swap one word, and now every branch your agents touched is one
-command away.
+Same muscle memory, all the way down to Ctrl-C: it stops the server, exactly like
+`npm run dev`. Swap one word, and now every branch your agents touched is one command
+away.
 
-<sub>(Each of those attaches to your terminal, so you'd <code>^C</code> to detach before
-running the next — which, as the next section explains, doesn't stop anything.)</sub>
+## The switcher underneath
 
-## Detach and switch. Attach and watch.
-
-Here's the part that isn't `npm run dev`.
-
-The server **always lives in the background**. What you call "foreground" is just a
-*viewport* — your terminal, attached to the log stream. So:
+Here's the part that isn't `npm run dev`. That one live server actually runs in the
+**background**, and your terminal is just a *viewport* onto its log stream — so you can
+move it, leave it running, or watch it from somewhere else:
 
 ```sh
-perchd                 # attach: live logs in your terminal, like npm run dev
-^C                     # detach: you stop watching. the server KEEPS RUNNING.
-perchd fix/payments    # move the perch to another branch
-perchd stop            # actually terminate it
+perchd                   # attach: live logs in your terminal, like npm run dev
+^C                       #   → stops it, just like npm run dev
+perchd feature/auth -d   # switch to another branch, but DON'T attach — keep your prompt
+perchd attach            # come watch that one; here ^C only detaches, it keeps running
+perchd stop              # terminate whatever's active, from anywhere
 ```
 
-> **Ctrl-C detaches. It does not kill.**
-> That one rule is what makes switching safe — and it's the opposite reflex from
-> `npm run dev`. To really stop the server, say `perchd stop`.
+> **Ctrl-C stops the server you started — like `npm run dev`.**
+> The one exception is `perchd attach`: you're peeking at a server that's meant to
+> persist, so there Ctrl-C only *detaches* and leaves it running (the banner tells you
+> which mode you're in). Either way, `perchd stop` is the definitive kill.
 
-And when you'd rather not tie up a prompt at all, `-d` switches without attaching:
-
-```sh
-perchd feature/auth -d   # switch, print the URL, hand your prompt back
-perchd attach            # ...come watch it whenever you like
-```
-
-One server. One port. `-d` is the only knob, and it means the same thing everywhere.
+So there are two ways to keep a server alive while you move on: start it detached with
+`-d`, or `attach` to it and Ctrl-C back out. Closing the terminal window on a server you
+started stops it too — no orphans.
 
 ## Before / after
 
@@ -156,8 +150,8 @@ otherwise a clean built-in prompt takes over.
 ```sh
 cd any/worktree/of/your/repo
 perchd                       # run this worktree, attached (your `npm run dev`)
-^C                           # detach — it keeps running
-perchd feature/auth -d       # switch to another branch, don't attach
+^C                           # stop it — just like npm run dev
+perchd feature/auth -d       # switch to another branch, keep it in the background
 perchd status                # table: worktree, runner, port, which is ACTIVE
 perchd stop                  # stop the active server
 ```
@@ -218,12 +212,14 @@ hint and will be removed in a future major.
 | `perchd dev feature/auth` | `perchd feature/auth` |
 | `perchd` (background switch) | `perchd -d` |
 | `perchd switch feature/auth` (background) | `perchd feature/auth -d` |
-| Ctrl-C **stopped** the server | Ctrl-C **detaches**; use `perchd stop` |
+| Ctrl-C stopped the server | Ctrl-C still stops it — same as before |
 
 `perchd switch` still exists as an explicit synonym, but like every switch it now
 **attaches** by default — pass `-d` to get the old background behavior.
 
-The last row is the one to internalize: Ctrl-C no longer kills the dev server.
+> If you used `0.4.0` specifically: that release briefly made Ctrl-C *detach* instead of
+> stop. `0.5.0` reverts to the intuitive `npm run dev` behavior — Ctrl-C stops the server
+> you started. Only `perchd attach` detaches on Ctrl-C now.
 
 ## Supported frameworks
 
@@ -285,10 +281,15 @@ No. `perchd` *is* your `npm run dev` — same foreground, same logs — it just 
 worktree (or the main tree) on the same port. Swap one word today; discover the
 switching whenever you feel like it.
 
-**Why doesn't Ctrl-C stop the server?**
-Because the server isn't *yours* — it's the perch, and your terminal is just looking at
-it. Detaching lets you close the terminal, switch branches, or attach from somewhere
-else without a restart. `perchd stop` is the kill switch.
+**Does Ctrl-C stop the server, like `npm run dev`?**
+Yes — when you started it (`perchd` / `perchd <branch>`), Ctrl-C stops it, and so does
+closing the terminal. The one exception is `perchd attach`: there you're looking at a
+server that's meant to keep running, so Ctrl-C just detaches and leaves it alive. The
+banner tells you which mode you're in, and `perchd stop` always terminates.
+
+**How do I keep a server running while I move on?**
+Two ways: start it detached with `perchd <branch> -d` (never attaches), or `perchd attach`
+to a running one and Ctrl-C back out.
 
 **Can't it just run all eight servers at once?**
 No. You have two eyes. It runs the one you're looking at. That's not a limitation —
