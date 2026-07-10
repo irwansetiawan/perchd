@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { cac } from "cac";
 import pc from "picocolors";
 import { loadContext } from "./core/context.js";
@@ -17,6 +18,13 @@ import { runGc } from "./commands/gc.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runConfig } from "./commands/config.js";
 import { runWatch } from "./commands/watch.js";
+
+// Read our own version from package.json. `../package.json` resolves the same
+// from the entry whether it runs as src/cli.ts (tsx) or the bundled dist/cli.js
+// (published tarball ships package.json at the root, one level above dist/).
+const version: string = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 
 const cli = cac("perchd");
 const cwd = process.cwd();
@@ -135,6 +143,7 @@ cli.command("config", "print resolved config + detected runner per worktree")
 cli.command("watch", "watch for worktree deletion and auto-stop the active server")
   .action(async () => { try { await runWatch(cwd); } catch (e) { fail(e); } });
 
+cli.version(version); // adds `-v, --version`
 cli.help();
 
 // Split argv at the first standalone `--`: everything after is verbatim
