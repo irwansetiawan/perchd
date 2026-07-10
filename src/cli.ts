@@ -76,7 +76,12 @@ async function switchThenMaybeAttach(target: string | undefined, flags: any): Pr
   });
   if (!active || flags.detach) return;
   const ctx = await loadContext(cwd);
-  process.exit(await attachViewport(active, ctx.commonDir, { fromStart: true }));
+  // We started the server → Ctrl-C stops it, like `npm run dev`.
+  process.exit(await attachViewport(active, ctx.commonDir, {
+    fromStart: true,
+    stopOnInterrupt: true,
+    stopTimeoutMs: ctx.config.stop_timeout * 1000,
+  }));
 }
 
 type Cmd = ReturnType<typeof cli.command>;

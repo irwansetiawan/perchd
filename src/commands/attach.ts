@@ -13,11 +13,14 @@ import { runSwitch } from "./switch.js";
 export async function runAttach(cwd: string, target?: string): Promise<number> {
   const ctx = await loadContext(cwd);
 
+  // `attach` never stops on Ctrl-C: you're peeking at a server meant to persist.
+  const stopTimeoutMs = ctx.config.stop_timeout * 1000;
+
   if (target) {
     const active = await runSwitch({ target, quiet: true, nowIso: new Date().toISOString(), cwd });
     if (!active) return 1;
     // Freshly started: replay the log from the top so the startup banner shows.
-    return attachViewport(active, ctx.commonDir, { fromStart: true });
+    return attachViewport(active, ctx.commonDir, { fromStart: true, stopOnInterrupt: false, stopTimeoutMs });
   }
 
   const active = readState(ctx.commonDir).active;
@@ -30,5 +33,5 @@ export async function runAttach(cwd: string, target?: string): Promise<number> {
     return 1;
   }
   // Re-attaching to a server that has been up a while: show recent lines only.
-  return attachViewport(active, ctx.commonDir, { fromStart: false });
+  return attachViewport(active, ctx.commonDir, { fromStart: false, stopOnInterrupt: false, stopTimeoutMs });
 }
