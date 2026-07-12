@@ -68,6 +68,14 @@ Flow for a switch: `cli.ts` → `core/context.ts` (git worktrees + common dir) �
   extra `--`, so the user writes `-- -- --host`. Don't special-case npm.
 - **`cli.ts` splits argv at the first standalone `--`** before handing the front half to
   cac, so cac never sees passthrough args.
+- **Update notifier (`core/update.ts`) must stay off the hot path and off stdout.** The
+  notice reflects the *previous* check; a stale cache triggers a **detached** `perchd
+  __update-check` (hidden argv branch, handled before cac) that fetches the registry and
+  writes `$XDG_CACHE_HOME/perchd/update-check.json` — the current command never awaits the
+  network. The notice prints to **stderr** and the whole feature is skipped when
+  `stdout` isn't a TTY, because `perchd path` is read via `$(...)` in the shell `cd`
+  function; a notice on stdout would corrupt it. Also skipped under `CI` /
+  `NO_UPDATE_NOTIFIER` / `pnpm dev` (argv[1] ends `.ts`).
 - **`docs/superpowers/` and `perchd-prd.md` are gitignored and must NEVER be committed.**
   They were deliberately purged from git history (filter-repo + force-push, 2026-06-14).
   Design/spec/plan docs live there on disk, local-only. Don't reference them from tracked
