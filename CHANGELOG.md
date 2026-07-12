@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0]
+
+### Added
+
+- **Update notifier.** perchd checks npm (at most once every 24h, in a detached
+  background process) and, if your installed version is behind the published `latest`,
+  prints a one-line notice on your next run:
+  `⚠ Your perchd version X is outdated. Latest is Y. Update with: npm i -g perchd@latest`.
+  The check never delays a command (the notice reflects the previous background check,
+  cached under `$XDG_CACHE_HOME/perchd/`), never breaks offline, and is written to
+  **stderr** and skipped whenever stdout isn't a TTY — so it can't corrupt `perchd path`
+  inside the shell `cd` function. Silenced by `NO_UPDATE_NOTIFIER=1` or `CI`.
+
 ## [0.5.0]
 
 ### Changed

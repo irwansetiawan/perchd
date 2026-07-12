@@ -18,6 +18,7 @@ import { runGc } from "./commands/gc.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runConfig } from "./commands/config.js";
 import { runWatch } from "./commands/watch.js";
+import { HIDDEN_COMMAND, maybeNotifyUpdate, runUpdateCheck } from "./core/update.js";
 
 // Read our own version from package.json. `../package.json` resolves the same
 // from the entry whether it runs as src/cli.ts (tsx) or the bundled dist/cli.js
@@ -153,10 +154,19 @@ cli.command("watch", "watch for worktree deletion and auto-stop the active serve
 cli.version(version); // adds `-v, --version`
 cli.help();
 
-// Split argv at the first standalone `--`: everything after is verbatim
-// passthrough for the runner. Parse only the front so cac doesn't choke on it.
-const rawArgv = process.argv.slice(2);
-const sepIdx = rawArgv.indexOf("--");
-passthrough = sepIdx >= 0 ? rawArgv.slice(sepIdx + 1) : [];
-const frontArgv = sepIdx >= 0 ? rawArgv.slice(0, sepIdx) : rawArgv;
-cli.parse([process.argv[0], process.argv[1], ...frontArgv]);
+// Hidden: the detached background refresh (spawned by maybeNotifyUpdate). Handled
+// before cac so it never appears in help and never triggers its own notice.
+if (process.argv[2] === HIDDEN_COMMAND) {
+  void runUpdateCheck().finally(() => process.exit(0));
+} else {
+  // Notify (from cache) + kick off a background refresh; never blocks the command.
+  maybeNotifyUpdate(version);
+
+  // Split argv at the first standalone `--`: everything after is verbatim
+  // passthrough for the runner. Parse only the front so cac doesn't choke on it.
+  const rawArgv = process.argv.slice(2);
+  const sepIdx = rawArgv.indexOf("--");
+  passthrough = sepIdx >= 0 ? rawArgv.slice(sepIdx + 1) : [];
+  const frontArgv = sepIdx >= 0 ? rawArgv.slice(0, sepIdx) : rawArgv;
+  cli.parse([process.argv[0], process.argv[1], ...frontArgv]);
+}

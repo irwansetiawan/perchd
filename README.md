@@ -303,6 +303,13 @@ to free before starting the next one.
 **Do I need a daemon running in the background?**
 No daemon. perchd does its bookkeeping lazily, the next time you run it.
 
+**Does perchd phone home?**
+Only to check for its own updates: at most once a day it asks the npm registry for the
+latest `perchd` version (in a detached background process, so it never slows a command),
+and prints a one-line "you're outdated" notice to stderr if you're behind. Set
+`NO_UPDATE_NOTIFIER=1` (or run under `CI`) to turn it off. Nothing else leaves your
+machine.
+
 **Does it manage my agents (Claude Code, Cursor, Codex)?**
 No. It manages dev servers. The agents are your problem — perchd just gives you a clean
 window onto whatever they've built.
