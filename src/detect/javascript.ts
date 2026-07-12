@@ -33,8 +33,14 @@ function hasConfig(dir: string, base: string): boolean {
 }
 
 function portFromScript(cmd: string): number | null {
-  const m = cmd.match(/(?:-p|--port[ =])\s*(\d{2,5})/);
-  return m ? Number(m[1]) : null;
+  // An explicit `-p`/`--port` flag wins over a `PORT=` env assignment — that's
+  // how next/vite/etc. resolve the two when both are present.
+  const flag = cmd.match(/(?:-p|--port[ =])\s*(\d{2,5})/);
+  if (flag) return Number(flag[1]);
+  // `PORT=5100 next dev` (or `cross-env PORT=5100 …`) — an inline env-var prefix,
+  // the other common way a project pins its dev port. Frameworks honour $PORT.
+  const env = cmd.match(/(?:^|\s)PORT=(\d{2,5})\b/);
+  return env ? Number(env[1]) : null;
 }
 
 function portFromEnv(dir: string): number | null {

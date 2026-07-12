@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Port detection now reads an inline `PORT=` prefix in the dev script.** A script
+  like `"dev": "PORT=5100 next dev"` (or `cross-env PORT=5100 …`) was ignored, so
+  perchd fell back to the framework default (e.g. Next.js 3000) while `npm run dev`
+  actually served on 5100. perchd now honours the `PORT=` assignment; an explicit
+  `-p`/`--port` flag still wins over it.
+
 ## [0.6.0]
 
 ### Added
