@@ -83,4 +83,45 @@ describe("javascriptDetector", () => {
     pkg({ scripts: { dev: "PORT=5100 next dev -p 4001" }, dependencies: { next: "1" } });
     expect(javascriptDetector.detect(dir)?.port).toBe(4001);
   });
+
+  it("reads server.port from a vite config", () => {
+    pkg({ scripts: { dev: "vite" }, devDependencies: { vite: "5" } });
+    writeFileSync(join(dir, "vite.config.ts"), "export default { server: { host: true, port: 5200 } }");
+    expect(javascriptDetector.detect(dir)?.port).toBe(5200);
+  });
+
+  it("reads server.port from an astro config even past a nested block", () => {
+    pkg({ scripts: { dev: "astro dev" }, dependencies: { astro: "4" } });
+    writeFileSync(join(dir, "astro.config.mjs"), "export default { server: { headers: {}, port: 4322 } }");
+    expect(javascriptDetector.detect(dir)?.port).toBe(4322);
+  });
+
+  it("reads devServer.port from a nuxt config", () => {
+    pkg({ scripts: { dev: "nuxt dev" }, dependencies: { nuxt: "3" } });
+    writeFileSync(join(dir, "nuxt.config.ts"), "export default defineNuxtConfig({ devServer: { port: 3005 } })");
+    expect(javascriptDetector.detect(dir)?.port).toBe(3005);
+  });
+
+  it("reads a NUXT_PORT= prefix in the dev script", () => {
+    pkg({ scripts: { dev: "NUXT_PORT=3006 nuxt dev" }, dependencies: { nuxt: "3" } });
+    expect(javascriptDetector.detect(dir)?.port).toBe(3006);
+  });
+
+  it("prefers a --port flag over server.port in the config", () => {
+    pkg({ scripts: { dev: "vite --port 6000" }, devDependencies: { vite: "5" } });
+    writeFileSync(join(dir, "vite.config.ts"), "export default { server: { port: 5200 } }");
+    expect(javascriptDetector.detect(dir)?.port).toBe(6000);
+  });
+
+  it("reads PORT from .env.local when there is no bare .env", () => {
+    pkg({ scripts: { start: "node server.js" } });
+    writeFileSync(join(dir, ".env.local"), "PORT=4600\n");
+    expect(javascriptDetector.detect(dir)?.port).toBe(4600);
+  });
+
+  it("ignores an unrelated port: elsewhere in the config", () => {
+    pkg({ scripts: { dev: "vite" }, devDependencies: { vite: "5" } });
+    writeFileSync(join(dir, "vite.config.ts"), "export default { define: { API: 'http://x:9999/port:8888' } }");
+    expect(javascriptDetector.detect(dir)?.port).toBe(5173);
+  });
 });
