@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { cac } from "cac";
 import pc from "picocolors";
 import { loadContext } from "./core/context.js";
@@ -18,6 +19,13 @@ import { runDoctor } from "./commands/doctor.js";
 import { runConfig } from "./commands/config.js";
 import { runWatch } from "./commands/watch.js";
 
+// Read our own version from package.json. `../package.json` resolves the same
+// from the entry whether it runs as src/cli.ts (tsx) or the bundled dist/cli.js
+// (published tarball ships package.json at the root, one level above dist/).
+const version: string = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
+
 const cli = cac("perchd");
 const cwd = process.cwd();
 let passthrough: string[] = [];
@@ -37,15 +45,17 @@ function fail(e: unknown): never {
 }
 
 /**
- * Bare `perchd`: the worktree you're standing in is the obvious target.
- * Only when cwd is outside every worktree do we ask.
+ * Bare `perchd`: show the worktree menu, with the one you're standing in
+ * pre-selected. Enter re-runs where you stand (the `npm run dev` drop-in);
+ * arrowing to another worktree is the switch — perchd's whole point is not
+ * having to `cd` between them. The cwd worktree, else the active one, is the
+ * default landing.
  */
 async function bareTarget(): Promise<string | null> {
   const ctx = await loadContext(cwd);
-  const here = containingWorktree(ctx.worktrees, cwd);
-  if (here) return here.path;
   const active = readState(ctx.commonDir).active;
-  return pick(ctx.worktrees, active?.worktreePath ?? null);
+  const preselect = containingWorktree(ctx.worktrees, cwd)?.path ?? active?.worktreePath ?? null;
+  return pick(ctx.worktrees, active?.worktreePath ?? null, preselect);
 }
 
 /**
@@ -68,7 +78,12 @@ async function switchThenMaybeAttach(target: string | undefined, flags: any): Pr
   });
   if (!active || flags.detach) return;
   const ctx = await loadContext(cwd);
-  process.exit(await attachViewport(active, ctx.commonDir, { fromStart: true }));
+  // We started the server → Ctrl-C stops it, like `npm run dev`.
+  process.exit(await attachViewport(active, ctx.commonDir, {
+    fromStart: true,
+    stopOnInterrupt: true,
+    stopTimeoutMs: ctx.config.stop_timeout * 1000,
+  }));
 }
 
 type Cmd = ReturnType<typeof cli.command>;
@@ -135,6 +150,7 @@ cli.command("config", "print resolved config + detected runner per worktree")
 cli.command("watch", "watch for worktree deletion and auto-stop the active server")
   .action(async () => { try { await runWatch(cwd); } catch (e) { fail(e); } });
 
+cli.version(version); // adds `-v, --version`
 cli.help();
 
 // Split argv at the first standalone `--`: everything after is verbatim

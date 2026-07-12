@@ -35,7 +35,7 @@ describe("attach flow", () => {
   let wtPath: string;
   afterAll(async () => { if (wtPath) rmSync(wtPath, { recursive: true, force: true }); });
 
-  it("detaching the viewport leaves the server running; stop then kills it", async () => {
+  it("runViewport never signals the server itself (interrupt only reports intent)", async () => {
     wtPath = await setupRepo();
     const active = await runSwitch({
       target: wtPath, cmd: "PORT=3021 node server.js", port: 3021,
@@ -56,9 +56,10 @@ describe("attach flow", () => {
       pollMs: 50,
       onSigint: (h) => { setTimeout(h, 100); return () => {}; },
     });
-    expect(exit).toEqual({ reason: "detached" });
+    expect(exit).toEqual({ reason: "interrupted", signal: "SIGINT" });
 
-    // THE POINT OF THE WHOLE REDESIGN: the server survived the detach.
+    // runViewport reports intent but never signals the server — the stop/detach
+    // decision lives in attachViewport. So here the server is still alive.
     expect(isPidAlive(active!.pid)).toBe(true);
     expect(await waitForPort(3021, 2000)).toBe(true);
 

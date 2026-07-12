@@ -27,9 +27,25 @@ const deps = (over: Partial<ViewportDeps>): ViewportDeps => ({
 });
 
 describe("runViewport", () => {
-  it("SIGINT detaches (the server is never signalled)", async () => {
+  it("SIGINT reports interrupted (runViewport never signals the server itself)", async () => {
     const exit = await runViewport(active, deps({
       onSigint: (h) => { setTimeout(h, 10); return () => {}; },
+    }));
+    expect(exit).toEqual({ reason: "interrupted", signal: "SIGINT" });
+  });
+
+  it("SIGHUP reports interrupted with the SIGHUP signal", async () => {
+    const exit = await runViewport(active, deps({
+      onSighup: (h) => { setTimeout(h, 10); return () => {}; },
+    }));
+    expect(exit).toEqual({ reason: "interrupted", signal: "SIGHUP" });
+  });
+
+  it("a dead tail process ends the viewport as a plain detach (no signal)", async () => {
+    const tail = fakeTail();
+    const exit = await runViewport(active, deps({
+      startTail: () => { setTimeout(() => tail.emit("exit", 0), 10); return tail; },
+      onSigint: () => () => {},
     }));
     expect(exit).toEqual({ reason: "detached" });
   });

@@ -60,13 +60,16 @@ processes. That keeps them trivially testable.
 ## The core model
 
 perchd keeps **one** dev server alive, always running in the background. A terminal
-"in the foreground" is just a **detachable viewport** onto that server's log stream —
-so `Ctrl-C` detaches the viewport and leaves the server running; only `perchd stop`
-terminates it. The foreground/background choice is one explicit flag (`-d`) over one
-lifecycle, never two separate commands.
+"in the foreground" is just a **viewport** onto that server's log stream. The
+foreground/background choice is one explicit flag (`-d`) over one lifecycle, never two
+separate commands.
 
-Keep that shape when adding features. If a change makes "am I attached?" and "is the
-server alive?" the same question again, it's the wrong change.
+Ctrl-C is *hybrid* (`attachViewport`'s `stopOnInterrupt`): if this viewport **started**
+the server (bare `perchd` / `switch`), Ctrl-C — and closing the window — stop it, the
+`npm run dev` drop-in promise. If it **attached** to an already-running server
+(`perchd attach`), Ctrl-C only detaches. The banner states which, per mode. Keep that
+distinction crisp when adding features: whether Ctrl-C stops depends on *who started the
+server*, not on how it looks.
 
 ## Scope
 

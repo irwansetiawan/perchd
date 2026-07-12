@@ -49,7 +49,7 @@ describe("runAttach", () => {
     expect(attachViewport).toHaveBeenCalledWith(
       expect.objectContaining({ logPath: "/l.log" }),
       "/common",
-      { fromStart: false },
+      { fromStart: false, stopOnInterrupt: false, stopTimeoutMs: 8000 },
     );
   });
 
@@ -60,7 +60,7 @@ describe("runAttach", () => {
     expect(attachViewport).toHaveBeenCalledWith(
       expect.objectContaining({ branch: "feature/auth" }),
       "/common",
-      { fromStart: true },
+      { fromStart: true, stopOnInterrupt: false, stopTimeoutMs: 8000 },
     );
   });
 
