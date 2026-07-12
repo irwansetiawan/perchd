@@ -94,8 +94,13 @@ in the background and writes to a log file. "Foreground" is not a kind of server
 a **viewport**: `tail -f` on that log plus a poller watching the state file
 (`core/viewport.ts`).
 
-- Bare `perchd` is the `npm run dev` drop-in: switch to cwd's worktree, then attach.
-  Outside any worktree it shows the picker (`containingWorktree` decides).
+- Bare `perchd` shows the worktree **picker with cwd's worktree pre-selected**
+  (`bareTarget` → `pick`, `pickerChoices` floats the pre-select to the front and clack
+  gets `initialValue`): Enter re-runs where you stand (the `npm run dev` drop-in),
+  arrowing to another is the switch — surfacing the other worktrees is the point (no
+  `cd`). Naming a target (`perchd <branch>`) skips the menu. The picker needs a TTY; a
+  non-interactive bare `perchd` fails with a clear "name a target" message, not a raw
+  `uv_tty_init` crash.
 - `-d` / `--detach` flips **any** switch to background. One uniform, explicit axis.
 - **Hybrid Ctrl-C (`attachViewport`'s `stopOnInterrupt`):** a viewport that *started*
   the server (bare `perchd` / `switch`) **stops** it on Ctrl-C, and on window-close

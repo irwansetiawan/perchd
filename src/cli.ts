@@ -45,15 +45,17 @@ function fail(e: unknown): never {
 }
 
 /**
- * Bare `perchd`: the worktree you're standing in is the obvious target.
- * Only when cwd is outside every worktree do we ask.
+ * Bare `perchd`: show the worktree menu, with the one you're standing in
+ * pre-selected. Enter re-runs where you stand (the `npm run dev` drop-in);
+ * arrowing to another worktree is the switch — perchd's whole point is not
+ * having to `cd` between them. The cwd worktree, else the active one, is the
+ * default landing.
  */
 async function bareTarget(): Promise<string | null> {
   const ctx = await loadContext(cwd);
-  const here = containingWorktree(ctx.worktrees, cwd);
-  if (here) return here.path;
   const active = readState(ctx.commonDir).active;
-  return pick(ctx.worktrees, active?.worktreePath ?? null);
+  const preselect = containingWorktree(ctx.worktrees, cwd)?.path ?? active?.worktreePath ?? null;
+  return pick(ctx.worktrees, active?.worktreePath ?? null, preselect);
 }
 
 /**

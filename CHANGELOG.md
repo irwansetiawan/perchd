@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   server itself; the stop-vs-detach policy lives in `attachViewport` (graceful `stopGroup`
   on SIGINT, best-effort group `SIGTERM` on SIGHUP since the terminal is already gone).
 
+- **Bare `perchd` shows the worktree picker again, with the current worktree
+  pre-selected.** In 0.4.0, bare `perchd` inside a worktree silently ran *that* worktree
+  and never showed the menu — which hid perchd's whole "switch without `cd`-ing" point.
+  Now it always shows the picker with cwd's worktree floated to the top and pre-selected:
+  press Enter to run where you stand (the drop-in), or arrow to another worktree to
+  switch. Naming a target (`perchd <branch>`) still skips the menu. A non-interactive
+  bare `perchd` (piped / CI) now fails with a clear "name a target" message instead of a
+  raw TTY crash.
+
 ### Added
 
 - **`perchd -v` / `perchd --version`** — previously threw `Unknown option`. Prints the

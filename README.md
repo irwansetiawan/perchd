@@ -48,29 +48,29 @@ branch you're looking at. No `cd`. No remembering the command. No port roulette.
 
 ## You already know the command
 
-You don't have to learn perchd to use perchd. Your dev command is `npm run dev` (or
-`pnpm dev`, or `make dev`). Trade it for **`perchd`** and you get the same thing —
-foreground, logs streaming — except it runs **any worktree**, always on the **same
-port**:
+You don't have to learn perchd to use perchd. Run **`perchd`** and you get a menu of
+your worktrees with the one you're standing in **pre-selected** — press Enter and it's
+your `npm run dev`: foreground, logs streaming, on the native port. Arrow to a different
+worktree and that's the switch. Or name one directly and skip the menu:
 
 ```sh
-perchd                 # the worktree you're standing in — your `npm run dev`, basically
-perchd feature/auth    # a different version, same terminal, same URL
+perchd                 # menu of worktrees, current one pre-selected → Enter runs it
+perchd feature/auth    # skip the menu — run that worktree by name
 perchd main            # the main tree, without leaving your branch
 ```
 
 Same muscle memory, all the way down to Ctrl-C: it stops the server, exactly like
-`npm run dev`. Swap one word, and now every branch your agents touched is one command
-away.
+`npm run dev`. The menu is the point, not overhead — it's how you switch which branch
+you're previewing without ever `cd`-ing between worktrees.
 
 ## The switcher underneath
 
-Here's the part that isn't `npm run dev`. That one live server actually runs in the
-**background**, and your terminal is just a *viewport* onto its log stream — so you can
-move it, leave it running, or watch it from somewhere else:
+That one live server actually runs in the **background**, and your terminal is just a
+*viewport* onto its log stream — so you can move it, leave it running, or watch it from
+somewhere else:
 
 ```sh
-perchd                   # attach: live logs in your terminal, like npm run dev
+perchd                   # pick a worktree → attach, live logs, like npm run dev
 ^C                       #   → stops it, just like npm run dev
 perchd feature/auth -d   # switch to another branch, but DON'T attach — keep your prompt
 perchd attach            # come watch that one; here ^C only detaches, it keeps running
@@ -149,9 +149,9 @@ otherwise a clean built-in prompt takes over.
 
 ```sh
 cd any/worktree/of/your/repo
-perchd                       # run this worktree, attached (your `npm run dev`)
+perchd                       # menu (current worktree pre-selected) → Enter runs it
 ^C                           # stop it — just like npm run dev
-perchd feature/auth -d       # switch to another branch, keep it in the background
+perchd feature/auth -d       # switch to another branch by name, keep it in the background
 perchd status                # table: worktree, runner, port, which is ACTIVE
 perchd stop                  # stop the active server
 ```
@@ -160,7 +160,8 @@ perchd stop                  # stop the active server
 
 | Command | What it does |
 | --- | --- |
-| `perchd [branch\|path]` | Switch the active dev server **and attach** (drop-in for `npm run dev`). Interactive picker when there's no obvious target. |
+| `perchd` | Menu of worktrees, current one pre-selected — Enter runs it (drop-in), or pick another to switch. Then attaches. |
+| `perchd <branch\|path>` | Skip the menu: switch the active dev server to that worktree **and attach**. |
 | `perchd … -d` / `--detach` | Switch but stay in the background — print the URL and return the prompt. |
 | `perchd switch [branch\|path]` | Explicit synonym for `perchd [branch\|path]`. Note it now **attaches** by default; add `-d` for the old background behavior. |
 | `perchd attach [branch]` | Attach to the active server (or switch to `branch`, then attach). |
@@ -277,9 +278,9 @@ Then `perchd cd feature/auth` drops you right where your agent has been working.
 ## FAQ
 
 **Do I have to learn a new tool?**
-No. `perchd` *is* your `npm run dev` — same foreground, same logs — it just aims at any
-worktree (or the main tree) on the same port. Swap one word today; discover the
-switching whenever you feel like it.
+Barely. Run `perchd`, press Enter on the pre-selected current worktree, and it's your
+`npm run dev` — same foreground, same logs, same port. The only new thing is that the
+menu lets you arrow to another worktree instead of `cd`-ing there first.
 
 **Does Ctrl-C stop the server, like `npm run dev`?**
 Yes — when you started it (`perchd` / `perchd <branch>`), Ctrl-C stops it, and so does
