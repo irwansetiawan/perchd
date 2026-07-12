@@ -37,17 +37,47 @@ function portFromScript(cmd: string): number | null {
   // how next/vite/etc. resolve the two when both are present.
   const flag = cmd.match(/(?:-p|--port[ =])\s*(\d{2,5})/);
   if (flag) return Number(flag[1]);
-  // `PORT=5100 next dev` (or `cross-env PORT=5100 …`) — an inline env-var prefix,
-  // the other common way a project pins its dev port. Frameworks honour $PORT.
-  const env = cmd.match(/(?:^|\s)PORT=(\d{2,5})\b/);
+  // `PORT=5100 next dev` (or `cross-env PORT=5100 …`, `NUXT_PORT=… nuxt dev`) —
+  // an inline env-var prefix, the other common way a project pins its dev port.
+  // next/nuxt/node honour $PORT; nuxt also reads $NUXT_PORT.
+  const env = cmd.match(/(?:^|\s)(?:PORT|NUXT_PORT)=(\d{2,5})\b/);
   return env ? Number(env[1]) : null;
 }
 
+// Config files whose frameworks carry the dev port in the config itself
+// (vite/astro/sveltekit use `server.port`; nuxt uses `devServer.port`) rather
+// than honouring $PORT. next.config has no port option, so it's absent here.
+const CONFIG_BASES = ["vite.config", "astro.config", "svelte.config", "nuxt.config"];
+
+function portFromConfig(dir: string): number | null {
+  for (const base of CONFIG_BASES) {
+    for (const ext of [".ts", ".js", ".mjs", ".cjs"]) {
+      const p = join(dir, base + ext);
+      if (!existsSync(p)) continue;
+      // Best-effort: a literal `server: { … port: NNNN }` (or `devServer:`),
+      // bounded so we don't grab an unrelated `port:` elsewhere in the file.
+      const m = readFileSync(p, "utf8").match(
+        /\b(?:server|devServer)\s*:\s*\{[\s\S]{0,300}?\bport\s*:\s*(\d{2,5})\b/,
+      );
+      if (m) return Number(m[1]);
+    }
+  }
+  return null;
+}
+
+// dotenv cascade (Next/CRA precedence order) for a plain-Node app that reads
+// `process.env.PORT`. Frameworks like Next/Vite ignore PORT here — that's why
+// this sits below the script and config sources.
+const ENV_FILES = [".env.development.local", ".env.local", ".env.development", ".env"];
+
 function portFromEnv(dir: string): number | null {
-  const envPath = join(dir, ".env");
-  if (!existsSync(envPath)) return null;
-  const m = readFileSync(envPath, "utf8").match(/^\s*PORT\s*=\s*(\d{2,5})/m);
-  return m ? Number(m[1]) : null;
+  for (const f of ENV_FILES) {
+    const p = join(dir, f);
+    if (!existsSync(p)) continue;
+    const m = readFileSync(p, "utf8").match(/^\s*PORT\s*=\s*(\d{2,5})/m);
+    if (m) return Number(m[1]);
+  }
+  return null;
 }
 
 export const javascriptDetector: Detector = {
@@ -74,7 +104,10 @@ export const javascriptDetector: Detector = {
       if (depMatch || cfgMatch) { type = fw.type; port = fw.port; break; }
     }
 
-    const override = portFromScript(scripts[script]) ?? portFromEnv(dir);
+    // Port precedence, first hit wins: an explicit flag / env-prefix in the dev
+    // script, then the framework's config-file port, then a dotenv PORT.
+    const override =
+      portFromScript(scripts[script]) ?? portFromConfig(dir) ?? portFromEnv(dir);
     if (override) port = override;
 
     return { type, command, cwd: dir, port, url: urlFor(port) };

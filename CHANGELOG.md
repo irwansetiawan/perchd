@@ -9,11 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Port detection now reads an inline `PORT=` prefix in the dev script.** A script
-  like `"dev": "PORT=5100 next dev"` (or `cross-env PORT=5100 …`) was ignored, so
-  perchd fell back to the framework default (e.g. Next.js 3000) while `npm run dev`
-  actually served on 5100. perchd now honours the `PORT=` assignment; an explicit
-  `-p`/`--port` flag still wins over it.
+- **Port detection now looks in every place a dev port is actually pinned**, instead
+  of only a `-p`/`--port` flag and a bare `.env`. A project like Toshi
+  (`"dev": "PORT=5100 next dev"`) reported the framework default (Next.js 3000) while
+  `npm run dev` served on 5100. The JS detector now resolves the port from, first hit
+  wins:
+  1. a `-p`/`--port` flag in the dev script;
+  2. an inline `PORT=` / `NUXT_PORT=` env prefix in the dev script (incl. after
+     `cross-env`);
+  3. the framework's **config file** — `server.port` for vite/astro/sveltekit,
+     `devServer.port` for nuxt (previously never read at all);
+  4. a `PORT=` in the dotenv cascade (`.env.local`, `.env.development`, `.env`, …), for
+     plain-Node apps.
+
+  Sources each framework ignores are not read for it (e.g. Next ignores `PORT` in
+  `.env` files — verified — so that never masks the real port).
 
 ## [0.6.0]
 
