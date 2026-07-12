@@ -68,4 +68,19 @@ describe("javascriptDetector", () => {
     writeFileSync(join(dir, ".env"), "PORT=4500\n");
     expect(javascriptDetector.detect(dir)?.port).toBe(4500);
   });
+
+  it("reads an inline PORT= env prefix in the dev script", () => {
+    pkg({ scripts: { dev: "PORT=5100 next dev --turbopack" }, dependencies: { next: "1" } });
+    expect(javascriptDetector.detect(dir)?.port).toBe(5100);
+  });
+
+  it("reads PORT= after a cross-env wrapper", () => {
+    pkg({ scripts: { dev: "cross-env PORT=5100 next dev" }, dependencies: { next: "1" } });
+    expect(javascriptDetector.detect(dir)?.port).toBe(5100);
+  });
+
+  it("prefers an explicit --port flag over an inline PORT= prefix", () => {
+    pkg({ scripts: { dev: "PORT=5100 next dev -p 4001" }, dependencies: { next: "1" } });
+    expect(javascriptDetector.detect(dir)?.port).toBe(4001);
+  });
 });
