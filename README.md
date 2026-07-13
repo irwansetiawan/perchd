@@ -175,6 +175,7 @@ perchd stop                  # stop the active server
 | `perchd doctor` | Diagnose stale pids, dead ports, undetected worktrees, foreign port holders. |
 | `perchd config` | Print the resolved config and detected runner per worktree. |
 | `perchd watch` | Foreground watcher: auto-stops the active server the instant its worktree is deleted. |
+| `perchd update` | Update perchd to the latest version, using the package manager that installed it (npm/pnpm/bun). |
 | `perchd dev [target]` | **Deprecated** — an alias for `perchd [target]`. See [migrating](#migrating-from-perchd-dev). |
 
 **Flags on a switch:** `-d`/`--detach` (don't attach), `--cmd <str>` and `--port <n>`

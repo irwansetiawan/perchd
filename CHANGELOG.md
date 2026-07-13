@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`perchd update`** — update perchd in place. It uses the **same package manager that
+  installed it** (npm/pnpm/bun, sniffed from the running binary's path), so it never
+  creates a second, shadowing copy in a different global prefix. Runs in the foreground,
+  so a sudo-needing (system-node) install surfaces its own error to re-run.
+- **Opt-in background auto-update (`PERCHD_AUTO_UPDATE=1`, default off).** When enabled,
+  the existing once-a-day background check also installs a newer version silently; it
+  applies on your **next** run (never hot-swaps the running process). Fail-silent — an
+  unwritable/sudo-needing install just no-ops and the notice keeps showing, so it can't
+  brick or block anything. The update notice reflects the mode: `Run: perchd update`
+  normally, or `Auto-updating in the background …` when the flag is on.
+
+### Changed
+
+- The update notice now points at **`perchd update`** instead of a raw
+  `npm i -g perchd@latest` string.
+
 ### Fixed
 
 - **Port detection now looks in every place a dev port is actually pinned**, instead
