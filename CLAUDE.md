@@ -76,6 +76,19 @@ Flow for a switch: `cli.ts` → `core/context.ts` (git worktrees + common dir) �
   `stdout` isn't a TTY, because `perchd path` is read via `$(...)` in the shell `cd`
   function; a notice on stdout would corrupt it. Also skipped under `CI` /
   `NO_UPDATE_NOTIFIER` / `pnpm dev` (argv[1] ends `.ts`).
+  - **Updating uses the manager that installed perchd**, sniffed from the running
+    binary's path (`detectManager`: `/.bun/`→bun, `/pnpm/`|`$PNPM_HOME`→pnpm, else npm).
+    Never hard-code `npm i -g` — a pnpm/bun install lives in a different global prefix,
+    so `npm i -g` would create a second, shadowing copy. `perchd update` runs it in the
+    foreground (inherited stdio, so a sudo-needing system-node install surfaces its
+    error). The current version rides along in the `__update-check` argv so the detached
+    child can compare without re-reading `package.json`.
+  - **Opt-in auto-update (`PERCHD_AUTO_UPDATE=1`, default off).** When set, the detached
+    `__update-check`, after caching, installs the newer version **silently** (applies on
+    the *next* run — never hot-swaps the running process). Fail-silent by design: an
+    unwritable/sudo-needing install just no-ops and the notice keeps showing, so it can
+    never brick or block. Off by default because silently mutating a user-installed binary
+    is surprising and the install method can be ambiguous (symlinked dev checkouts, etc.).
 - **`docs/superpowers/` and `perchd-prd.md` are gitignored and must NEVER be committed.**
   They were deliberately purged from git history (filter-repo + force-push, 2026-06-14).
   Design/spec/plan docs live there on disk, local-only. Don't reference them from tracked

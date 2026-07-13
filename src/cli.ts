@@ -18,7 +18,8 @@ import { runGc } from "./commands/gc.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runConfig } from "./commands/config.js";
 import { runWatch } from "./commands/watch.js";
-import { HIDDEN_COMMAND, maybeNotifyUpdate, runUpdateCheck } from "./core/update.js";
+import { runUpdate } from "./commands/update.js";
+import { HIDDEN_COMMAND, autoUpdateEnabled, maybeNotifyUpdate, runUpdateCheck } from "./core/update.js";
 
 // Read our own version from package.json. `../package.json` resolves the same
 // from the entry whether it runs as src/cli.ts (tsx) or the bundled dist/cli.js
@@ -151,13 +152,21 @@ cli.command("config", "print resolved config + detected runner per worktree")
 cli.command("watch", "watch for worktree deletion and auto-stop the active server")
   .action(async () => { try { await runWatch(cwd); } catch (e) { fail(e); } });
 
+cli.command("update", "update perchd to the latest version (via the manager that installed it)")
+  .action(async () => { try { process.exit(await runUpdate()); } catch (e) { fail(e); } });
+
 cli.version(version); // adds `-v, --version`
 cli.help();
 
 // Hidden: the detached background refresh (spawned by maybeNotifyUpdate). Handled
 // before cac so it never appears in help and never triggers its own notice.
 if (process.argv[2] === HIDDEN_COMMAND) {
-  void runUpdateCheck().finally(() => process.exit(0));
+  // `perchd __update-check <version>`: refresh the cache and, when opted in,
+  // auto-update. The version rides in argv so we needn't re-read package.json.
+  void runUpdateCheck({
+    current: process.argv[3] ?? version,
+    autoUpdate: autoUpdateEnabled(),
+  }).finally(() => process.exit(0));
 } else {
   // Notify (from cache) + kick off a background refresh; never blocks the command.
   maybeNotifyUpdate(version);
