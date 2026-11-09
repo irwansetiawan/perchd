@@ -76,19 +76,28 @@ Flow for a switch: `cli.ts` → `core/context.ts` (git worktrees + common dir) �
   `stdout` isn't a TTY, because `perchd path` is read via `$(...)` in the shell `cd`
   function; a notice on stdout would corrupt it. Also skipped under `CI` /
   `NO_UPDATE_NOTIFIER` / `pnpm dev` (argv[1] ends `.ts`).
-  - **Updating uses the manager that installed perchd**, sniffed from the running
-    binary's path (`detectManager`: `/.bun/`→bun, `/pnpm/`|`$PNPM_HOME`→pnpm, else npm).
-    Never hard-code `npm i -g` — a pnpm/bun install lives in a different global prefix,
-    so `npm i -g` would create a second, shadowing copy. `perchd update` runs it in the
-    foreground (inherited stdio, so a sudo-needing system-node install surfaces its
-    error). The current version rides along in the `__update-check` argv so the detached
-    child can compare without re-reading `package.json`.
-  - **Opt-in auto-update (`PERCHD_AUTO_UPDATE=1`, default off).** When set, the detached
+  - **Updating uses the manager that installed perchd**, identified from the package's
+    real path (`resolveInstallPath` follows the bin symlink; `detectManager` matches npm's
+    `/lib/node_modules/perchd/`, pnpm's `/pnpm/global/` or `$PNPM_HOME/global/`, bun's
+    `/install/global/`). Never hard-code `npm i -g` — a pnpm/bun install lives in a
+    different global prefix, so `npm i -g` would create a second, shadowing copy.
+    **Detection must fail closed:** anything unrecognised (linked checkouts, yarn, npx,
+    project deps) returns null, so `perchd update` refuses and auto-update does nothing.
+    `perchd update` runs in the foreground (inherited stdio, so a sudo-needing system-node
+    install surfaces its error). The current version rides along in the `__update-check`
+    argv so the detached child can compare without re-reading `package.json`.
+  - **Auto-update is on by default (`PERCHD_AUTO_UPDATE=0` opts out).** The detached
     `__update-check`, after caching, installs the newer version **silently** (applies on
-    the *next* run — never hot-swaps the running process). Fail-silent by design: an
-    unwritable/sudo-needing install just no-ops and the notice keeps showing, so it can
-    never brick or block. Off by default because silently mutating a user-installed binary
-    is surprising and the install method can be ambiguous (symlinked dev checkouts, etc.).
+    the *next* run — never hot-swaps the running process). Guards: the release must have
+    been on npm for **3 days** (`COOLDOWN_MS`, from the packument's `time`; unknown time
+    means no install), and the install is pinned to that exact version, not `@latest`,
+    which could by then be a newer release that hasn't cooled down. The cooldown looks
+    only at the current `latest`, so a version superseded while cooling is skipped.
+    The cache records outcomes so the notices stay true: `autoUpdateFailed` (notice stops
+    promising, points at `perchd update`) and `autoUpdated` (one-time "updated itself"
+    message, consumed on the first run of the new version).
+  - **`perchd update` skips the notifier entirely** (`updateCheckSuppressed`). Otherwise it
+    prints "outdated" straight after a successful update and can race a background install.
 - **`docs/superpowers/` and `perchd-prd.md` are gitignored and must NEVER be committed.**
   They were deliberately purged from git history (filter-repo + force-push, 2026-06-14).
   Design/spec/plan docs live there on disk, local-only. Don't reference them from tracked

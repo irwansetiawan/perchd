@@ -305,11 +305,15 @@ to free before starting the next one.
 No daemon. perchd does its bookkeeping lazily, the next time you run it.
 
 **Does perchd phone home?**
-Only to check for its own updates: at most once a day it asks the npm registry for the
-latest `perchd` version (in a detached background process, so it never slows a command),
-and prints a one-line "you're outdated" notice to stderr if you're behind. Set
-`NO_UPDATE_NOTIFIER=1` (or run under `CI`) to turn it off. Nothing else leaves your
-machine.
+Only for its own updates: at most once a day it asks the npm registry for the latest
+`perchd` version, in a detached background process, so it never slows a command. If
+you're behind and that release has been out for at least 3 days, perchd installs it in
+the background with the package manager you installed it with, and the new version
+applies on your next run. Installs it can't identify (linked checkouts, yarn, npx,
+project dependencies) are never touched; you just get a notice on stderr. Set
+`PERCHD_AUTO_UPDATE=0` to keep the check and notice but never install, or
+`NO_UPDATE_NOTIFIER=1` (or run under `CI`) to turn off all of it. Nothing else leaves
+your machine.
 
 **Does it manage my agents (Claude Code, Cursor, Codex)?**
 No. It manages dev servers. The agents are your problem — perchd just gives you a clean

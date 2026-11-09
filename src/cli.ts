@@ -161,7 +161,7 @@ cli.help();
 // Hidden: the detached background refresh (spawned by maybeNotifyUpdate). Handled
 // before cac so it never appears in help and never triggers its own notice.
 if (process.argv[2] === HIDDEN_COMMAND) {
-  // `perchd __update-check <version>`: refresh the cache and, when opted in,
+  // `perchd __update-check <version>`: refresh the cache and, unless opted out,
   // auto-update. The version rides in argv so we needn't re-read package.json.
   void runUpdateCheck({
     current: process.argv[3] ?? version,
