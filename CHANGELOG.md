@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1]
+
 ### Fixed
 
 - **Port detection now looks in every place a dev port is actually pinned**, instead
