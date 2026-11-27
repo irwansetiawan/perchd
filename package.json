@@ -40,7 +40,7 @@
   "bugs": {
     "url": "https://github.com/irwansetiawan/perchd/issues"
   },
-  "homepage": "https://github.com/irwansetiawan/perchd#readme",
+  "homepage": "https://fusionone.tech",
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
